@@ -58,199 +58,218 @@ void dashboard_create(lv_obj_t * parent)
 
     dashboard_screen = parent;
 
-    // Create optimized layout for 320x240 - larger speed/current, smaller others
+    // Create optimized layout for 480x480 square display
+    // Grid layout: 2x3 (2 columns, 3 rows) with better spacing and larger components
+    // Layout optimized for square format with improved visual hierarchy
+    
+    // Define grid parameters for 480x480
+    int container_width = 235;   // Increased width for better use of space
+    int container_height_large = 150; // Larger height for main displays
+    int container_height_medium = 110; // Medium height for secondary displays
+    int margin = 5;              // Margin between containers
+    int start_x = margin;
+    int start_y = margin;
+
     // TOP ROW: SPEED (left) | CURRENT (right) - EXTRA LARGE
     lv_obj_t * speed_container = lv_obj_create(parent);
     lv_obj_remove_style_all(speed_container);
-    lv_obj_set_size(speed_container, 158, 110);
-    lv_obj_set_pos(speed_container, 2, 2);
+    lv_obj_set_size(speed_container, container_width, container_height_large);
+    lv_obj_set_pos(speed_container, start_x, start_y);
     lv_obj_set_style_bg_color(speed_container, lv_color_hex(0x000000), 0);
     lv_obj_set_style_bg_opa(speed_container, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(speed_container, 1, 0);
+    lv_obj_set_style_border_width(speed_container, 2, 0);
     lv_obj_set_style_border_color(speed_container, lv_color_hex(0x333333), 0);
+    lv_obj_set_style_radius(speed_container, 8, 0);
     lv_obj_clear_flag(speed_container, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t * speed_title = lv_label_create(speed_container);
     lv_label_set_text(speed_title, "SPEED");
     lv_obj_set_style_text_color(speed_title, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(speed_title, &lv_font_montserrat_14, 0);
-    lv_obj_align(speed_title, LV_ALIGN_TOP_MID, 0, 5);
+    lv_obj_set_style_text_font(speed_title, &lv_font_montserrat_18, 0);
+    lv_obj_align(speed_title, LV_ALIGN_TOP_MID, 0, 8);
 
     speed_label = lv_label_create(speed_container);
-    lv_obj_set_style_text_color(speed_label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(speed_label, lv_color_hex(0x00FF00), 0);
     lv_obj_set_style_text_font(speed_label, &lv_font_montserrat_48, 0);
-    lv_obj_align(speed_label, LV_ALIGN_CENTER, 0, 8);
+    lv_obj_align(speed_label, LV_ALIGN_CENTER, 0, 10);
 
     lv_obj_t * kmh_label = lv_label_create(speed_container);
     lv_label_set_text(kmh_label, "km/h");
-    lv_obj_set_style_text_color(kmh_label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(kmh_label, &lv_font_montserrat_12, 0);
-    lv_obj_align(kmh_label, LV_ALIGN_BOTTOM_MID, 0, -3);
+    lv_obj_set_style_text_color(kmh_label, lv_color_hex(0xCCCCCC), 0);
+    lv_obj_set_style_text_font(kmh_label, &lv_font_montserrat_16, 0);
+    lv_obj_align(kmh_label, LV_ALIGN_BOTTOM_MID, 0, -8);
 
     // TOP RIGHT: CURRENT - EXTRA LARGE
     lv_obj_t * current_container = lv_obj_create(parent);
     lv_obj_remove_style_all(current_container);
-    lv_obj_set_size(current_container, 158, 110);
-    lv_obj_set_pos(current_container, 162, 2);
+    lv_obj_set_size(current_container, container_width, container_height_large);
+    lv_obj_set_pos(current_container, start_x + container_width + margin, start_y);
     lv_obj_set_style_bg_color(current_container, lv_color_hex(0x000000), 0);
     lv_obj_set_style_bg_opa(current_container, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(current_container, 1, 0);
+    lv_obj_set_style_border_width(current_container, 2, 0);
     lv_obj_set_style_border_color(current_container, lv_color_hex(0x333333), 0);
+    lv_obj_set_style_radius(current_container, 8, 0);
     lv_obj_clear_flag(current_container, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t * current_title = lv_label_create(current_container);
     lv_label_set_text(current_title, "CURRENT");
     lv_obj_set_style_text_color(current_title, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(current_title, &lv_font_montserrat_14, 0);
-    lv_obj_align(current_title, LV_ALIGN_TOP_MID, 0, 5);
+    lv_obj_set_style_text_font(current_title, &lv_font_montserrat_18, 0);
+    lv_obj_align(current_title, LV_ALIGN_TOP_MID, 0, 8);
 
     current_label = lv_label_create(current_container);
-    lv_obj_set_style_text_color(current_label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_color(current_label, lv_color_hex(0x00AAFF), 0);
     lv_obj_set_style_text_font(current_label, &lv_font_montserrat_48, 0);
-    lv_obj_align(current_label, LV_ALIGN_CENTER, 0, 8);
+    lv_obj_align(current_label, LV_ALIGN_CENTER, 0, 10);
 
     lv_obj_t * current_unit = lv_label_create(current_container);
     lv_label_set_text(current_unit, "A");
-    lv_obj_set_style_text_color(current_unit, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(current_unit, &lv_font_montserrat_12, 0);
-    lv_obj_align(current_unit, LV_ALIGN_BOTTOM_MID, 0, -3);
+    lv_obj_set_style_text_color(current_unit, lv_color_hex(0xCCCCCC), 0);
+    lv_obj_set_style_text_font(current_unit, &lv_font_montserrat_16, 0);
+    lv_obj_align(current_unit, LV_ALIGN_BOTTOM_MID, 0, -8);
 
-    // MIDDLE ROW: PERCENT (left) | BATTERY (right) - SMALLER
+    // MIDDLE ROW: BATTERY % (left) | VOLTAGE (right) - MEDIUM
+    int middle_y = start_y + container_height_large + margin;
+    
     lv_obj_t * percent_container = lv_obj_create(parent);
     lv_obj_remove_style_all(percent_container);
-    lv_obj_set_size(percent_container, 158, 62);
-    lv_obj_set_pos(percent_container, 2, 114);
+    lv_obj_set_size(percent_container, container_width, container_height_medium);
+    lv_obj_set_pos(percent_container, start_x, middle_y);
     lv_obj_set_style_bg_color(percent_container, lv_color_hex(0x000000), 0);
     lv_obj_set_style_bg_opa(percent_container, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(percent_container, 1, 0);
+    lv_obj_set_style_border_width(percent_container, 2, 0);
     lv_obj_set_style_border_color(percent_container, lv_color_hex(0x333333), 0);
+    lv_obj_set_style_radius(percent_container, 8, 0);
     lv_obj_clear_flag(percent_container, LV_OBJ_FLAG_SCROLLABLE);
 
-    // Battery percentage title
     lv_obj_t * percent_title = lv_label_create(percent_container);
     lv_label_set_text(percent_title, "BATTERY %");
     lv_obj_set_style_text_color(percent_title, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(percent_title, &lv_font_montserrat_14, 0);
-    lv_obj_align(percent_title, LV_ALIGN_TOP_MID, 0, 5);
+    lv_obj_set_style_text_font(percent_title, &lv_font_montserrat_16, 0);
+    lv_obj_align(percent_title, LV_ALIGN_TOP_MID, 0, 8);
 
-    // Battery percentage text (centered, no % symbol)
     bat_percent_label = lv_label_create(percent_container);
-    lv_obj_set_style_text_color(bat_percent_label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(bat_percent_label, &lv_font_montserrat_36, 0);
-    lv_obj_align(bat_percent_label, LV_ALIGN_CENTER, 0, 5);
+    lv_obj_set_style_text_color(bat_percent_label, lv_color_hex(0x00FF00), 0);
+    lv_obj_set_style_text_font(bat_percent_label, &lv_font_montserrat_48, 0);
+    lv_obj_align(bat_percent_label, LV_ALIGN_CENTER, 0, 8);
 
     // Keep battery_bar and bat_level as NULL for compatibility
     battery_bar = NULL;
     bat_level = NULL;
 
-    // MIDDLE RIGHT: BATTERY (voltage) - SMALLER
+    // MIDDLE RIGHT: VOLTAGE - MEDIUM
     lv_obj_t * battery_container = lv_obj_create(parent);
     lv_obj_remove_style_all(battery_container);
-    lv_obj_set_size(battery_container, 158, 62);
-    lv_obj_set_pos(battery_container, 162, 114);
+    lv_obj_set_size(battery_container, container_width, container_height_medium);
+    lv_obj_set_pos(battery_container, start_x + container_width + margin, middle_y);
     lv_obj_set_style_bg_color(battery_container, lv_color_hex(0x000000), 0);
     lv_obj_set_style_bg_opa(battery_container, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(battery_container, 1, 0);
+    lv_obj_set_style_border_width(battery_container, 2, 0);
     lv_obj_set_style_border_color(battery_container, lv_color_hex(0x333333), 0);
+    lv_obj_set_style_radius(battery_container, 8, 0);
     lv_obj_clear_flag(battery_container, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t * battery_title = lv_label_create(battery_container);
-    lv_label_set_text(battery_title, "BATTERY");
+    lv_label_set_text(battery_title, "VOLTAGE");
     lv_obj_set_style_text_color(battery_title, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(battery_title, &lv_font_montserrat_14, 0);
-    lv_obj_align(battery_title, LV_ALIGN_TOP_MID, 0, 5);
+    lv_obj_set_style_text_font(battery_title, &lv_font_montserrat_16, 0);
+    lv_obj_align(battery_title, LV_ALIGN_TOP_MID, 0, 8);
 
     voltage_label = lv_label_create(battery_container);
-    lv_obj_set_style_text_color(voltage_label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(voltage_label, &lv_font_montserrat_28, 0);
-    lv_obj_align(voltage_label, LV_ALIGN_CENTER, 0, 3);
+    lv_obj_set_style_text_color(voltage_label, lv_color_hex(0xFFAA00), 0);
+    lv_obj_set_style_text_font(voltage_label, &lv_font_montserrat_36, 0);
+    lv_obj_align(voltage_label, LV_ALIGN_CENTER, 0, 5);
 
     lv_obj_t * voltage_unit = lv_label_create(battery_container);
     lv_label_set_text(voltage_unit, "V");
-    lv_obj_set_style_text_color(voltage_unit, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(voltage_unit, &lv_font_montserrat_12, 0);
-    lv_obj_align(voltage_unit, LV_ALIGN_BOTTOM_MID, 0, -3);
+    lv_obj_set_style_text_color(voltage_unit, lv_color_hex(0xCCCCCC), 0);
+    lv_obj_set_style_text_font(voltage_unit, &lv_font_montserrat_16, 0);
+    lv_obj_align(voltage_unit, LV_ALIGN_BOTTOM_MID, 0, -8);
 
-    // BOTTOM ROW: ODOMETER (left) | TEMPERATURE (right) - SMALLER
+    // BOTTOM ROW: ODOMETER (left) | TEMPERATURE (right) - MEDIUM
+    int bottom_y = middle_y + container_height_medium + margin;
+    
     lv_obj_t * odo_container = lv_obj_create(parent);
     lv_obj_remove_style_all(odo_container);
-    lv_obj_set_size(odo_container, 158, 62);
-    lv_obj_set_pos(odo_container, 2, 178);
+    lv_obj_set_size(odo_container, container_width, container_height_medium);
+    lv_obj_set_pos(odo_container, start_x, bottom_y);
     lv_obj_set_style_bg_color(odo_container, lv_color_hex(0x000000), 0);
     lv_obj_set_style_bg_opa(odo_container, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(odo_container, 1, 0);
+    lv_obj_set_style_border_width(odo_container, 2, 0);
     lv_obj_set_style_border_color(odo_container, lv_color_hex(0x333333), 0);
+    lv_obj_set_style_radius(odo_container, 8, 0);
     lv_obj_clear_flag(odo_container, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t * odo_title = lv_label_create(odo_container);
     lv_label_set_text(odo_title, "ODOMETER");
     lv_obj_set_style_text_color(odo_title, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(odo_title, &lv_font_montserrat_14, 0);
-    lv_obj_align(odo_title, LV_ALIGN_TOP_MID, 0, 5);
+    lv_obj_set_style_text_font(odo_title, &lv_font_montserrat_16, 0);
+    lv_obj_align(odo_title, LV_ALIGN_TOP_MID, 0, 8);
 
     total_label = lv_label_create(odo_container);
     lv_obj_set_style_text_color(total_label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(total_label, &lv_font_montserrat_24, 0);
-    lv_obj_align(total_label, LV_ALIGN_CENTER, 0, 3);
+    lv_obj_set_style_text_font(total_label, &lv_font_montserrat_32, 0);
+    lv_obj_align(total_label, LV_ALIGN_CENTER, 0, 5);
 
     lv_obj_t * km_label = lv_label_create(odo_container);
     lv_label_set_text(km_label, "km");
-    lv_obj_set_style_text_color(km_label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(km_label, &lv_font_montserrat_12, 0);
-    lv_obj_align(km_label, LV_ALIGN_BOTTOM_MID, 0, -3);
+    lv_obj_set_style_text_color(km_label, lv_color_hex(0xCCCCCC), 0);
+    lv_obj_set_style_text_font(km_label, &lv_font_montserrat_16, 0);
+    lv_obj_align(km_label, LV_ALIGN_BOTTOM_MID, 0, -8);
 
-    // BOTTOM RIGHT: TEMPERATURE - SMALLER
+    // BOTTOM RIGHT: TEMPERATURE - MEDIUM
     lv_obj_t * temp_container = lv_obj_create(parent);
     lv_obj_remove_style_all(temp_container);
-    lv_obj_set_size(temp_container, 158, 62);
-    lv_obj_set_pos(temp_container, 162, 178);
+    lv_obj_set_size(temp_container, container_width, container_height_medium);
+    lv_obj_set_pos(temp_container, start_x + container_width + margin, bottom_y);
     lv_obj_set_style_bg_color(temp_container, lv_color_hex(0x000000), 0);
     lv_obj_set_style_bg_opa(temp_container, LV_OPA_COVER, 0);
-    lv_obj_set_style_border_width(temp_container, 1, 0);
+    lv_obj_set_style_border_width(temp_container, 2, 0);
     lv_obj_set_style_border_color(temp_container, lv_color_hex(0x333333), 0);
+    lv_obj_set_style_radius(temp_container, 8, 0);
     lv_obj_clear_flag(temp_container, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t * temp_title = lv_label_create(temp_container);
     lv_label_set_text(temp_title, "TEMPERATURE");
     lv_obj_set_style_text_color(temp_title, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(temp_title, &lv_font_montserrat_12, 0);
-    lv_obj_align(temp_title, LV_ALIGN_TOP_MID, 0, 3);
+    lv_obj_set_style_text_font(temp_title, &lv_font_montserrat_14, 0);
+    lv_obj_align(temp_title, LV_ALIGN_TOP_MID, 0, 8);
 
-    // Motor temperature (no icon)
+    // Motor temperature
     motor_temp_label = lv_label_create(temp_container);
-    lv_obj_set_style_text_color(motor_temp_label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(motor_temp_label, &lv_font_montserrat_18, 0);
-    lv_obj_set_pos(motor_temp_label, 15, 20);
+    lv_obj_set_style_text_color(motor_temp_label, lv_color_hex(0xFF6600), 0);
+    lv_obj_set_style_text_font(motor_temp_label, &lv_font_montserrat_24, 0);
+    lv_obj_set_pos(motor_temp_label, 20, 35);
 
     lv_obj_t * motor_temp_unit = lv_label_create(temp_container);
     lv_label_set_text(motor_temp_unit, "°C");
-    lv_obj_set_style_text_color(motor_temp_unit, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(motor_temp_unit, &lv_font_montserrat_12, 0);
-    lv_obj_set_pos(motor_temp_unit, 55, 23);
+    lv_obj_set_style_text_color(motor_temp_unit, lv_color_hex(0xCCCCCC), 0);
+    lv_obj_set_style_text_font(motor_temp_unit, &lv_font_montserrat_14, 0);
+    lv_obj_set_pos(motor_temp_unit, 70, 38);
 
     lv_obj_t * motor_label = lv_label_create(temp_container);
     lv_label_set_text(motor_label, "MOTOR");
-    lv_obj_set_style_text_color(motor_label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(motor_label, &lv_font_montserrat_10, 0);
-    lv_obj_set_pos(motor_label, 15, 40);
+    lv_obj_set_style_text_color(motor_label, lv_color_hex(0xCCCCCC), 0);
+    lv_obj_set_style_text_font(motor_label, &lv_font_montserrat_12, 0);
+    lv_obj_set_pos(motor_label, 20, 60);
 
-    // Controller temperature (no icon)
+    // Controller temperature
     esc_temp_label = lv_label_create(temp_container);
-    lv_obj_set_style_text_color(esc_temp_label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(esc_temp_label, &lv_font_montserrat_18, 0);
-    lv_obj_set_pos(esc_temp_label, 95, 20);
+    lv_obj_set_style_text_color(esc_temp_label, lv_color_hex(0xFF6600), 0);
+    lv_obj_set_style_text_font(esc_temp_label, &lv_font_montserrat_24, 0);
+    lv_obj_set_pos(esc_temp_label, 130, 35);
 
     lv_obj_t * ctrl_temp_unit = lv_label_create(temp_container);
     lv_label_set_text(ctrl_temp_unit, "°C");
-    lv_obj_set_style_text_color(ctrl_temp_unit, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(ctrl_temp_unit, &lv_font_montserrat_12, 0);
-    lv_obj_set_pos(ctrl_temp_unit, 125, 23);
+    lv_obj_set_style_text_color(ctrl_temp_unit, lv_color_hex(0xCCCCCC), 0);
+    lv_obj_set_style_text_font(ctrl_temp_unit, &lv_font_montserrat_14, 0);
+    lv_obj_set_pos(ctrl_temp_unit, 180, 38);
 
     lv_obj_t * ctrl_label = lv_label_create(temp_container);
     lv_label_set_text(ctrl_label, "CTRL");
-    lv_obj_set_style_text_color(ctrl_label, lv_color_hex(0xFFFFFF), 0);
-    lv_obj_set_style_text_font(ctrl_label, &lv_font_montserrat_10, 0);
-    lv_obj_set_pos(ctrl_label, 95, 40);
+    lv_obj_set_style_text_color(ctrl_label, lv_color_hex(0xCCCCCC), 0);
+    lv_obj_set_style_text_font(ctrl_label, &lv_font_montserrat_12, 0);
+    lv_obj_set_pos(ctrl_label, 130, 60);
 
     // Initialize other needed variables
     power_label = NULL;

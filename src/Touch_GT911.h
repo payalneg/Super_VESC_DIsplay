@@ -10,8 +10,8 @@
 // GT911 pins for ESP32-S3-Touch-LCD-4
 #define GT911_SDA_PIN       15
 #define GT911_SCL_PIN       7
-#define GT911_INT_PIN       4
-#define GT911_RST_PIN       -1  // Not connected on this board
+#define GT911_INT_PIN       16
+#define GT911_RST_PIN       -1  // Not connected on this board, but needed for address selection
 
 #define I2C_MASTER_FREQ_HZ  400000
 
@@ -56,9 +56,15 @@ struct GT911_Touch{
 // Function declarations
 uint8_t Touch_Init();
 uint8_t GT911_Touch_Reset(void);
+uint8_t GT911_Detect_Address(void);
 uint16_t GT911_Read_cfg(void);
 uint8_t Touch_Read_Data(void);
 uint8_t Touch_Get_XY(uint16_t *x, uint16_t *y, uint16_t *strength, uint8_t *point_num, uint8_t max_point_num);
 void example_touchpad_read(void);
 void IRAM_ATTR Touch_GT911_ISR(void);
 void Touch_Loop(void);
+void Touch_Debug_Info(void);
+void I2C_Scanner(void);
+
+// Global variable for current I2C address
+extern uint8_t GT911_Current_Address;

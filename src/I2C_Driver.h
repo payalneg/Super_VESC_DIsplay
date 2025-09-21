@@ -1,8 +1,8 @@
 #pragma once
 #include <Wire.h> 
 
-#define I2C_SCL_PIN       10
-#define I2C_SDA_PIN       11
+#define I2C_SCL_PIN       7
+#define I2C_SDA_PIN       15
 
 void I2C_Init(void);
 

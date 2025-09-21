@@ -38,14 +38,20 @@ void Lvgl_Touchpad_Read( lv_indev_drv_t * indev_drv, lv_indev_data_t * data )
   uint16_t touchpad_y[5] = {0};
   uint16_t strength[5]   = {0};
   uint8_t touchpad_cnt = 0;
-  Touch_Read_Data();
-  uint8_t touchpad_pressed = Touch_Get_XY(touchpad_x, touchpad_y, strength, &touchpad_cnt, GT911_LCD_TOUCH_MAX_POINTS);
-  if (touchpad_pressed && touchpad_cnt > 0) {
-    // For ESP32-S3-Touch-LCD-4 with 480x480 resolution
-    data->point.x = touchpad_x[0];
-    data->point.y = touchpad_y[0];
-    data->state = LV_INDEV_STATE_PR;
-    // printf("LVGL  : X=%u Y=%u num=%d\r\n", touchpad_x[0], touchpad_y[0],touchpad_cnt);
+  
+  // Only read touch data if available (more efficient)
+  if (Touch_Read_Data()) {
+    uint8_t touchpad_pressed = Touch_Get_XY(touchpad_x, touchpad_y, strength, &touchpad_cnt, GT911_LCD_TOUCH_MAX_POINTS);
+    if (touchpad_pressed && touchpad_cnt > 0) {
+      // For ESP32-S3-Touch-LCD-4 with 480x480 resolution
+      data->point.x = touchpad_x[0];
+      data->point.y = touchpad_y[0];
+      data->state = LV_INDEV_STATE_PR;
+      //printf("LVGL Touch: X=%u Y=%u strength=%u points=%d\r\n", 
+      //       touchpad_x[0], touchpad_y[0], strength[0], touchpad_cnt);
+    } else {
+      data->state = LV_INDEV_STATE_REL;
+    }
   } else {
     data->state = LV_INDEV_STATE_REL;
   }
