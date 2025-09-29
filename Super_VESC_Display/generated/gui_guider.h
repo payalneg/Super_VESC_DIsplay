@@ -18,93 +18,28 @@ extern "C" {
 typedef struct
 {
   
-	lv_obj_t *home;
-	bool home_del;
-	lv_obj_t *home_meter_board;
-	lv_meter_scale_t *home_meter_board_scale_0;
-	lv_meter_indicator_t *home_meter_board_scale_0_ndline_0;
-	lv_meter_indicator_t *home_meter_board_scale_0_scaleline_0;
-	lv_meter_indicator_t *home_meter_board_scale_0_scaleline_1;
-	lv_meter_indicator_t *home_meter_board_scale_0_scaleline_2;
-	lv_obj_t *home_label_digit;
-	lv_obj_t *home_label_trip_num;
-	lv_obj_t *home_label_power_num;
-	lv_obj_t *home_digital_clock_time;
-	lv_obj_t *home_bar_battery;
-	lv_obj_t *home_label_ODO_num;
-	lv_obj_t *home_img_right;
-	lv_obj_t *home_img_left;
-	lv_obj_t *home_label_WIFI;
-	lv_obj_t *home_label_BT;
-	lv_obj_t *home_img_moto;
-	lv_obj_t *home_img_light;
-	lv_obj_t *home_btn_mode_a;
-	lv_obj_t *home_btn_mode_a_label;
-	lv_obj_t *home_img_red;
-	lv_obj_t *home_img_green;
-	lv_obj_t *home_btn_mode_f;
-	lv_obj_t *home_btn_mode_f_label;
-	lv_obj_t *home_btn_mode_c;
-	lv_obj_t *home_btn_mode_c_label;
-	lv_obj_t *home_btn_mode_e;
-	lv_obj_t *home_btn_mode_e_label;
-	lv_obj_t *home_img_high_light;
-	lv_obj_t *mode;
-	bool mode_del;
-	lv_obj_t *mode_tileview;
-	lv_obj_t *mode_tileview_mode_a;
-	lv_obj_t *mode_tileview_mode_f;
-	lv_obj_t *mode_tileview_mode_c;
-	lv_obj_t *mode_tileview_mode_e;
-	lv_obj_t *mode_img_abg;
-	lv_obj_t *mode_cont;
-	lv_obj_t *mode_label_mode;
-	lv_obj_t *mode_label_A;
-	lv_obj_t *mode_img_nav;
-	lv_obj_t *mode_spangroup_1;
-	lv_span_t *mode_spangroup_1_span;
-	lv_obj_t *mode_animimg_map;
-	lv_obj_t *mode_label_dot;
-	lv_obj_t *mode_label_fkm_num;
-	lv_obj_t *mode_label_fkm;
-	lv_obj_t *mode_contf;
-	lv_obj_t *mode_label_fmode;
-	lv_obj_t *mode_label_F;
-	lv_obj_t *mode_label_speed;
-	lv_obj_t *mode_label_temp_num;
-	lv_obj_t *mode_img_temper;
-	lv_obj_t *mode_img_fbg;
-	lv_obj_t *mode_label_tempter;
-	lv_obj_t *mode_cont_4;
-	lv_obj_t *mode_label_cmode;
-	lv_obj_t *mode_label_C;
-	lv_obj_t *mode_label_ctemp_num;
-	lv_obj_t *mode_label_temperature;
-	lv_obj_t *mode_label_day;
-	lv_obj_t *mode_img_weather;
-	lv_obj_t *mode_img_cbg;
-	lv_obj_t *mode_label_name;
-	lv_obj_t *mode_contc;
-	lv_obj_t *mode_label_prev;
-	lv_obj_t *mode_label_play;
-	lv_obj_t *mode_label_next;
-	lv_obj_t *mode_img_music;
-	lv_obj_t *mode_img_1;
-	lv_obj_t *mode_img_2;
-	lv_obj_t *mode_img_ebg;
-	lv_obj_t *mode_label_ekm_num;
-	lv_obj_t *mode_conte;
-	lv_obj_t *mode_label_emode;
-	lv_obj_t *mode_label_E;
-	lv_obj_t *mode_label_ekm;
-	lv_obj_t *mode_chart_speed;
-	lv_chart_series_t *mode_chart_speed_0;
-	lv_obj_t *mode_img_logo;
-	lv_obj_t *mode_label_WIFI;
-	lv_obj_t *mode_bar_battery;
-	lv_obj_t *mode_digital_clock;
-	lv_obj_t *mode_img_home;
-	lv_obj_t *mode_label_BT;
+	lv_obj_t *dashboard;
+	bool dashboard_del;
+	lv_obj_t *dashboard_tileview_1;
+	lv_obj_t *dashboard_tileview_1_tile;
+	lv_obj_t *dashboard_Current_meter;
+	lv_meter_scale_t *dashboard_Current_meter_scale_0;
+	lv_meter_indicator_t *dashboard_Current_meter_scale_0_ndline_0;
+	lv_meter_indicator_t *dashboard_Current_meter_scale_0_arc_0;
+	lv_obj_t *dashboard_Current_arc;
+	lv_obj_t *dashboard_arc_1;
+	lv_obj_t *dashboard_Speed_text;
+	lv_obj_t *dashboard_ta_2;
+	lv_obj_t *dashboard_ta_3;
+	lv_obj_t *dashboard_odo_text;
+	lv_obj_t *dashboard_tileview_2;
+	lv_obj_t *dashboard_tileview_2_tile;
+	lv_obj_t *dashboard_Battery_arc;
+	lv_obj_t *dashboard_meter_1;
+	lv_meter_scale_t *dashboard_meter_1_scale_0;
+	lv_obj_t *dashboard_ta_1;
+	lv_obj_t *dashboard_ta_4;
+	lv_obj_t *dashboard_slider_1;
 }lv_ui;
 
 typedef void (*ui_setup_scr_t)(lv_ui * ui);
@@ -128,70 +63,15 @@ void init_keyboard(lv_ui *ui);
 extern lv_ui guider_ui;
 
 
-void setup_scr_home(lv_ui *ui);
-void setup_scr_mode(lv_ui *ui);
+void setup_scr_dashboard(lv_ui *ui);
 
-LV_IMG_DECLARE(_moto_480x480);
-LV_IMG_DECLARE(_needle_alpha_210x210);
-
-LV_IMG_DECLARE(_kmbg_100x100);
-
-LV_IMG_DECLARE(_battery_bak_26x14);
-
-LV_IMG_DECLARE(_battery_ind_26x14);
-LV_IMG_DECLARE(_direction_alpha_30x24);
-LV_IMG_DECLARE(_direction_alpha_30x24);
-LV_IMG_DECLARE(_monitor_alpha_25x21);
-LV_IMG_DECLARE(_light_alpha_28x28);
-LV_IMG_DECLARE(_image_red_alpha_210x210);
-LV_IMG_DECLARE(_image_green_alpha_210x210);
-LV_IMG_DECLARE(_high_beam_alpha_28x28);
-
-LV_IMG_DECLARE(_moto_480x480);
-LV_IMG_DECLARE(_det_bak_alpha_480x272);
-LV_IMG_DECLARE(_img_nav_1_alpha_70x70);
-#include "extra/widgets/animimg/lv_animimg.h"
-LV_IMG_DECLARE(mode_animimg_mapmap_0);
-LV_IMG_DECLARE(mode_animimg_mapmap_01);
-LV_IMG_DECLARE(mode_animimg_mapmap_02);
-LV_IMG_DECLARE(mode_animimg_mapmap_03);
-LV_IMG_DECLARE(mode_animimg_mapmap_04);
-LV_IMG_DECLARE(mode_animimg_mapmap_05);
-LV_IMG_DECLARE(mode_animimg_mapmap_06);
-LV_IMG_DECLARE(_tem_alpha_55x70);
-LV_IMG_DECLARE(_det_bak_alpha_480x272);
-LV_IMG_DECLARE(_sunny_alpha_40x40);
-LV_IMG_DECLARE(_det_bak_alpha_480x272);
-LV_IMG_DECLARE(_music_cover_1_alpha_110x110);
-LV_IMG_DECLARE(_music_cover_2_alpha_110x110);
-LV_IMG_DECLARE(_music_cover_3_alpha_110x110);
-LV_IMG_DECLARE(_det_bak_alpha_480x272);
-LV_IMG_DECLARE(_logo_alpha_60x20);
-
-LV_IMG_DECLARE(_battery_bak_26x14);
-
-LV_IMG_DECLARE(_battery_ind_26x14);
-LV_IMG_DECLARE(_home_alpha_26x26);
+LV_IMG_DECLARE(_back_480x480);
 
 LV_FONT_DECLARE(lv_font_montserratMedium_10)
 LV_FONT_DECLARE(lv_font_montserratMedium_12)
-LV_FONT_DECLARE(lv_font_Antonio_Regular_24)
-LV_FONT_DECLARE(lv_font_montserratMedium_16)
-LV_FONT_DECLARE(lv_font_Antonio_Regular_32)
-LV_FONT_DECLARE(lv_font_Antonio_Regular_16)
-LV_FONT_DECLARE(lv_font_Amiko_Regular_12)
-LV_FONT_DECLARE(lv_font_Amiko_Regular_50)
-LV_FONT_DECLARE(lv_font_montserratMedium_26)
-LV_FONT_DECLARE(lv_font_FontAwesome5_15)
-LV_FONT_DECLARE(lv_font_arial_16)
-LV_FONT_DECLARE(lv_font_Antonio_Regular_60)
-LV_FONT_DECLARE(lv_font_Abel_regular_16)
-LV_FONT_DECLARE(lv_font_Amiko_Regular_60)
-LV_FONT_DECLARE(lv_font_Antonio_Regular_40)
-LV_FONT_DECLARE(lv_font_Acme_Regular_30)
-LV_FONT_DECLARE(lv_font_Acme_Regular_16)
-LV_FONT_DECLARE(lv_font_Antonio_Regular_50)
-LV_FONT_DECLARE(lv_font_SourceHanSerifSC_Regular_13)
+LV_FONT_DECLARE(lv_font_Gotham_Bold_90)
+LV_FONT_DECLARE(lv_font_montserratMedium_18)
+LV_FONT_DECLARE(lv_font_Gotham_Bold_40)
 
 
 #ifdef __cplusplus

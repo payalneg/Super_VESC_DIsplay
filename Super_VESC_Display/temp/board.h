@@ -421,11 +421,11 @@
  *================*/
 
 /*Documentation of the widgets: https://docs.lvgl.io/latest/en/html/widgets/index.html*/
-#define LV_USE_ARC 0
+#define LV_USE_ARC 1
 
 #define LV_USE_BAR 1
 
-#define LV_USE_BTN 1
+#define LV_USE_BTN 0
 
 #define LV_USE_BTNMATRIX 0
 
@@ -453,11 +453,11 @@
 #define LV_ROLLER_INF_PAGES 7
 #endif    /* LV_USE_ROLLER */
 
-#define LV_USE_SLIDER 0
+#define LV_USE_SLIDER 1
 
 #define LV_USE_SWITCH 0
 
-#define LV_USE_TEXTAREA 0
+#define LV_USE_TEXTAREA 1
 #if LV_USE_TEXTAREA
 #define LV_TEXTAREA_DEF_PWD_SHOW_TIME 1500
 #endif    /* LV_USE_TEXTAREA */
@@ -474,7 +474,7 @@
 
 #define LV_USE_ANALOGCLOCK 0
 
-#define LV_USE_ANIMIMG 1
+#define LV_USE_ANIMIMG 0
 
 #define LV_USE_CALENDAR 0
 #if LV_USE_CALENDAR
@@ -489,11 +489,11 @@
 
 #define LV_USE_CAROUSEL 0
 
-#define LV_USE_CHART 1
+#define LV_USE_CHART 0
 
 #define LV_USE_COLORWHEEL 0
 
-#define LV_USE_DCLOCK 1
+#define LV_USE_DCLOCK 0
 
 #define LV_USE_IMGBTN 0
 
@@ -511,7 +511,7 @@
 
 #define LV_USE_RADIOBTN 0
 
-#define LV_USE_SPAN 1
+#define LV_USE_SPAN 0
 #if LV_USE_SPAN
 /*A line text can contain maximum num of span descriptor */
 #define LV_SPAN_SNIPPET_STACK_SIZE 64

@@ -5,7 +5,11 @@
     The provided LVGL library file must be installed first
 ******************************************************************************/
 #include "LVGL_Driver.h"
-#include "LVGL_Dashboard.h"
+#include "gui_guider.h"
+#include "custom.h"
+
+// Global GUI Builder UI instance
+lv_ui guider_ui;
 
 static lv_disp_draw_buf_t draw_buf;
 static lv_color_t buf1[ LVGL_BUF_LEN ];
@@ -85,8 +89,9 @@ void Lvgl_Init(void)
   indev_drv.read_cb = Lvgl_Touchpad_Read;
   lv_indev_drv_register( &indev_drv );
 
-  /* Create dashboard instead of simple label */
-  dashboard_create(lv_scr_act());
+  /* Initialize GUI Builder UI */
+  setup_ui(&guider_ui);
+  custom_init(&guider_ui);
 
   const esp_timer_create_args_t lvgl_tick_timer_args = {
     .callback = &example_increase_lvgl_tick,
@@ -95,10 +100,10 @@ void Lvgl_Init(void)
   esp_timer_handle_t lvgl_tick_timer = NULL;
   esp_timer_create(&lvgl_tick_timer_args, &lvgl_tick_timer);
   esp_timer_start_periodic(lvgl_tick_timer, EXAMPLE_LVGL_TICK_PERIOD_MS * 1000);
-
+  Serial.println("LVGL initialized");
 }
 void Lvgl_Loop(void)
 {
   lv_timer_handler(); /* let the GUI do its work */
-  dashboard_update_values(); /* update dashboard values */
+  /* GUI Builder handles updates through custom callbacks and timers */
 }

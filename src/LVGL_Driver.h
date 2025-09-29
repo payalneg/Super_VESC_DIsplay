@@ -1,15 +1,13 @@
 #pragma once
 
 #include <lvgl.h>
-#include "../lv_conf.h"
-#include <demos/lv_demos.h>
 #include <esp_heap_caps.h>
 #include "Display_ST7701.h"
 #include "Touch_GT911.h"
 
 #define LVGL_WIDTH     LCD_WIDTH
 #define LVGL_HEIGHT    LCD_HEIGHT
-#define LVGL_BUF_LEN  (LVGL_WIDTH * LVGL_HEIGHT / 20)
+#define LVGL_BUF_LEN  (LVGL_WIDTH * LVGL_HEIGHT / 5)
 
 #define EXAMPLE_LVGL_TICK_PERIOD_MS  2
 

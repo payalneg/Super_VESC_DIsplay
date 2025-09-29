@@ -28,7 +28,7 @@ void Driver_Loop() {
 void setup()
 {
   Serial.begin(115200);
-  delay(2000);
+  delay(5000);
   Serial.println("VESC Display Starting...");
   
   // Initialize display and backlight first
@@ -38,7 +38,7 @@ void setup()
   // Initialize touch screen (it will initialize its own I2C)
   if (Touch_Init()) {
     Serial.println("Touch screen initialized successfully!");
-    Touch_Debug_Info();  // Print debug information
+    //Touch_Debug_Info();  // Print debug information
   } else {
     Serial.println("Touch screen initialization failed!");
   }
@@ -60,6 +60,7 @@ void setup()
 void loop()
 {
   Lvgl_Loop();
+  //Serial.println("LVGL loop");
   //Touch_Loop();  // Process touch interrupts
   vTaskDelay(pdMS_TO_TICKS(5));
 }
