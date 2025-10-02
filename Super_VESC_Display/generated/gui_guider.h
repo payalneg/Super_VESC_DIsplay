@@ -18,25 +18,33 @@ extern "C" {
 typedef struct
 {
   
-	lv_obj_t *dashboard_2;
-	bool dashboard_2_del;
-	lv_obj_t *dashboard_2_tileview_1;
-	lv_obj_t *dashboard_2_tileview_1_tile;
-	lv_obj_t *dashboard_2_Battery_meter;
-	lv_meter_scale_t *dashboard_2_Battery_meter_scale_0;
-	lv_meter_indicator_t *dashboard_2_Battery_meter_scale_0_ndline_0;
-	lv_meter_indicator_t *dashboard_2_Battery_meter_scale_0_arc_0;
-	lv_meter_indicator_t *dashboard_2_Battery_meter_scale_0_arc_1;
-	lv_obj_t *dashboard_2_Current_meter;
-	lv_meter_scale_t *dashboard_2_Current_meter_scale_0;
-	lv_meter_indicator_t *dashboard_2_Current_meter_scale_0_ndline_0;
-	lv_meter_indicator_t *dashboard_2_Current_meter_scale_0_scaleline_0;
-	lv_obj_t *dashboard_2_Speed_meter;
-	lv_meter_scale_t *dashboard_2_Speed_meter_scale_0;
-	lv_meter_indicator_t *dashboard_2_Speed_meter_scale_0_ndline_0;
-	lv_meter_indicator_t *dashboard_2_Speed_meter_scale_0_arc_0;
-	lv_obj_t *dashboard_2_canvas_2;
-	lv_obj_t *dashboard_2_canvas_8;
+	lv_obj_t *dashboard;
+	bool dashboard_del;
+	lv_obj_t *dashboard_tileview_1;
+	lv_obj_t *dashboard_tileview_1_tile;
+	lv_obj_t *dashboard_Battery_meter;
+	lv_meter_scale_t *dashboard_Battery_meter_scale_0;
+	lv_meter_indicator_t *dashboard_Battery_meter_scale_0_ndline_0;
+	lv_meter_indicator_t *dashboard_Battery_meter_scale_0_arc_0;
+	lv_meter_indicator_t *dashboard_Battery_meter_scale_0_arc_1;
+	lv_obj_t *dashboard_Current_meter;
+	lv_meter_scale_t *dashboard_Current_meter_scale_0;
+	lv_meter_indicator_t *dashboard_Current_meter_scale_0_ndline_0;
+	lv_meter_indicator_t *dashboard_Current_meter_scale_0_arc_0;
+	lv_meter_indicator_t *dashboard_Current_meter_scale_0_arc_1;
+	lv_obj_t *dashboard_Speed_meter;
+	lv_meter_scale_t *dashboard_Speed_meter_scale_0;
+	lv_meter_indicator_t *dashboard_Speed_meter_scale_0_ndline_0;
+	lv_meter_indicator_t *dashboard_Speed_meter_scale_0_arc_0;
+	lv_obj_t *dashboard_odo_text;
+	lv_obj_t *dashboard_canvas_1;
+	lv_obj_t *dashboard_canvas_2;
+	lv_obj_t *dashboard_canvas_3;
+	lv_obj_t *dashboard_ta_1;
+	lv_obj_t *dashboard_ta_2;
+	lv_obj_t *dashboard_Speed_text;
+	lv_obj_t *screen_1;
+	bool screen_1_del;
 }lv_ui;
 
 typedef void (*ui_setup_scr_t)(lv_ui * ui);
@@ -60,12 +68,17 @@ void init_keyboard(lv_ui *ui);
 extern lv_ui guider_ui;
 
 
-void setup_scr_dashboard_2(lv_ui *ui);
+void setup_scr_dashboard(lv_ui *ui);
+void setup_scr_screen_1(lv_ui *ui);
 
-LV_FONT_DECLARE(lv_font_montserratMedium_10)
+LV_IMG_DECLARE(_dashboard_480x480);
+
+LV_FONT_DECLARE(lv_font_montserratMedium_13)
 LV_FONT_DECLARE(lv_font_montserratMedium_12)
+LV_FONT_DECLARE(lv_font_Montserrat_I_16)
 LV_FONT_DECLARE(lv_font_montserratMedium_16)
-LV_FONT_DECLARE(lv_font_Montserrat_I_12)
+LV_FONT_DECLARE(lv_font_Montserrat_I_15)
+LV_FONT_DECLARE(lv_font_Montserrat_I_61)
 
 
 #ifdef __cplusplus
