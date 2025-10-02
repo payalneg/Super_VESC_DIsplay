@@ -46,10 +46,10 @@
  *=========================*/
 
 /*1: use custom malloc/free, 0: use the built-in `lv_mem_alloc()` and `lv_mem_free()`*/
-#define LV_MEM_CUSTOM 0
+#define LV_MEM_CUSTOM 1
 #if LV_MEM_CUSTOM == 0
     /*Size of the memory available for `lv_mem_alloc()` in bytes (>= 2kB)*/
-    #define LV_MEM_SIZE (48U * 1024U)          /*[bytes]*/
+    #define LV_MEM_SIZE (256 * 1024U)          /*[bytes]*/
 
     /*Set an address for the memory pool instead of allocating it as a normal array. Can be in external SRAM too.*/
     #define LV_MEM_ADR 0     /*0: unused*/
@@ -60,10 +60,10 @@
     #endif
 
 #else       /*LV_MEM_CUSTOM*/
-    #define LV_MEM_CUSTOM_INCLUDE <stdlib.h>   /*Header for the dynamic memory function*/
-    #define LV_MEM_CUSTOM_ALLOC   malloc
-    #define LV_MEM_CUSTOM_FREE    free
-    #define LV_MEM_CUSTOM_REALLOC realloc
+    #define LV_MEM_CUSTOM_INCLUDE "esp_heap_caps.h"   /*Header for the dynamic memory function*/
+    #define LV_MEM_CUSTOM_ALLOC(size)   heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)
+    #define LV_MEM_CUSTOM_FREE    heap_caps_free
+    #define LV_MEM_CUSTOM_REALLOC(ptr, size) heap_caps_realloc(ptr, size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)
 #endif     /*LV_MEM_CUSTOM*/
 
 /*Number of the intermediate memory buffer used during rendering and other internal processing mechanisms.
@@ -337,7 +337,7 @@
 #define LV_ATTRIBUTE_MEM_ALIGN
 
 /*Attribute to mark large constant arrays for example font's bitmaps*/
-#define LV_ATTRIBUTE_LARGE_CONST
+#define LV_ATTRIBUTE_LARGE_CONST __attribute__((section(".rodata")))
 
 /*Compiler prefix for a big array declaration in RAM*/
 #define LV_ATTRIBUTE_LARGE_RAM_ARRAY

@@ -1,1 +1,1 @@
-GEN_CSRCS += _back_480x480.c
+GEN_CSRCS += _dashboard_480x480.c

@@ -18,28 +18,25 @@ extern "C" {
 typedef struct
 {
   
-	lv_obj_t *dashboard;
-	bool dashboard_del;
-	lv_obj_t *dashboard_tileview_1;
-	lv_obj_t *dashboard_tileview_1_tile;
-	lv_obj_t *dashboard_Current_meter;
-	lv_meter_scale_t *dashboard_Current_meter_scale_0;
-	lv_meter_indicator_t *dashboard_Current_meter_scale_0_ndline_0;
-	lv_meter_indicator_t *dashboard_Current_meter_scale_0_arc_0;
-	lv_obj_t *dashboard_Current_arc;
-	lv_obj_t *dashboard_arc_1;
-	lv_obj_t *dashboard_Speed_text;
-	lv_obj_t *dashboard_ta_2;
-	lv_obj_t *dashboard_ta_3;
-	lv_obj_t *dashboard_odo_text;
-	lv_obj_t *dashboard_tileview_2;
-	lv_obj_t *dashboard_tileview_2_tile;
-	lv_obj_t *dashboard_Battery_arc;
-	lv_obj_t *dashboard_meter_1;
-	lv_meter_scale_t *dashboard_meter_1_scale_0;
-	lv_obj_t *dashboard_ta_1;
-	lv_obj_t *dashboard_ta_4;
-	lv_obj_t *dashboard_slider_1;
+	lv_obj_t *dashboard_2;
+	bool dashboard_2_del;
+	lv_obj_t *dashboard_2_tileview_1;
+	lv_obj_t *dashboard_2_tileview_1_tile;
+	lv_obj_t *dashboard_2_Battery_meter;
+	lv_meter_scale_t *dashboard_2_Battery_meter_scale_0;
+	lv_meter_indicator_t *dashboard_2_Battery_meter_scale_0_ndline_0;
+	lv_meter_indicator_t *dashboard_2_Battery_meter_scale_0_arc_0;
+	lv_meter_indicator_t *dashboard_2_Battery_meter_scale_0_arc_1;
+	lv_obj_t *dashboard_2_Current_meter;
+	lv_meter_scale_t *dashboard_2_Current_meter_scale_0;
+	lv_meter_indicator_t *dashboard_2_Current_meter_scale_0_ndline_0;
+	lv_meter_indicator_t *dashboard_2_Current_meter_scale_0_scaleline_0;
+	lv_obj_t *dashboard_2_Speed_meter;
+	lv_meter_scale_t *dashboard_2_Speed_meter_scale_0;
+	lv_meter_indicator_t *dashboard_2_Speed_meter_scale_0_ndline_0;
+	lv_meter_indicator_t *dashboard_2_Speed_meter_scale_0_arc_0;
+	lv_obj_t *dashboard_2_canvas_2;
+	lv_obj_t *dashboard_2_canvas_8;
 }lv_ui;
 
 typedef void (*ui_setup_scr_t)(lv_ui * ui);
@@ -63,15 +60,12 @@ void init_keyboard(lv_ui *ui);
 extern lv_ui guider_ui;
 
 
-void setup_scr_dashboard(lv_ui *ui);
-
-LV_IMG_DECLARE(_back_480x480);
+void setup_scr_dashboard_2(lv_ui *ui);
 
 LV_FONT_DECLARE(lv_font_montserratMedium_10)
 LV_FONT_DECLARE(lv_font_montserratMedium_12)
-LV_FONT_DECLARE(lv_font_Gotham_Bold_90)
-LV_FONT_DECLARE(lv_font_montserratMedium_18)
-LV_FONT_DECLARE(lv_font_Gotham_Bold_40)
+LV_FONT_DECLARE(lv_font_montserratMedium_16)
+LV_FONT_DECLARE(lv_font_Montserrat_I_12)
 
 
 #ifdef __cplusplus
