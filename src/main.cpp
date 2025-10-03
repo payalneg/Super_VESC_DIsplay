@@ -5,12 +5,35 @@
 #include "LVGL_Driver.h"
 #include "Touch_GT911.h"
 #include "I2C_Driver.h"
-#include "VESC_Driver.h"
-#include "VESC_CAN_Driver.h"
+// #include "VESC_Driver.h"           // Отключено - конфликт с SDK
+// #include "VESC_CAN_Driver.h"       // Отключено - конфликт с SDK  
+// #include "VESC_TWAI_Driver.h"      // Отключено - конфликт с SDK
+// #include "VESC_TWAI_Interface.h"   // Отключено - конфликт с SDK
+#include "VESC_SDK_Driver.h"
 
 void DriverTask(void *parameter) {
   while(1){
-    VESC_CAN_Loop();  // Update VESC communication
+    VESC_SDK_Loop();  // Update VESC SDK communication
+    
+    // Print VESC status every 2 seconds
+    static unsigned long last_print = 0;
+    if (millis() - last_print > 2000) {
+      if (VESC_SDK_IsConnected()) {
+        float speed = VESC_SDK_GetSpeed();
+        float voltage = VESC_SDK_GetBatteryVoltage();
+        float percentage = VESC_SDK_GetBatteryPercentage();
+        float power = VESC_SDK_GetPower();
+        float temp_fet = VESC_SDK_GetTempFET();
+        float temp_motor = VESC_SDK_GetTempMotor();
+        
+        Serial.printf("VESC SDK: %.1f km/h | %.1fV (%.0f%%) | %.0fW | FET:%.0f°C Motor:%.0f°C\n", 
+                      speed, voltage, percentage, power, temp_fet, temp_motor);
+      } else {
+        Serial.println("VESC SDK: Disconnected - Check CAN bus connection");
+      }
+      last_print = millis();
+    }
+    
     vTaskDelay(pdMS_TO_TICKS(50));  // Faster updates for VESC data
   }
 }
@@ -46,15 +69,23 @@ void setup()
   // Initialize I2C for other peripherals on different pins
   I2C_Init();
   
-  // Initialize VESC communication
-  //VESC_CAN_Init();
+  // Initialize VESC SDK communication
+  if (VESC_SDK_Init(0)) {  // VESC ID = 0
+    Serial.println("VESC SDK initialized successfully!");
+    
+    // Configuration removed - using VESC controller settings
+    // Can be added later if needed for speed/battery calculations
+    
+  } else {
+    Serial.println("VESC SDK initialization failed!");
+  }
   
   // Initialize LVGL with dashboard
   Lvgl_Init();
 
-  // Start the VESC display
+  // Start the VESC display and communication task
   Serial.println("VESC Display Ready!");
-  //Driver_Loop();
+  Driver_Loop();
 }
 
 void loop()
