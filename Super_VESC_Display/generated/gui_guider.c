@@ -76,7 +76,6 @@ void init_scr_del_flag(lv_ui *ui)
 {
 
     ui->dashboard_del = true;
-    ui->screen_1_del = true;
 }
 
 void setup_ui(lv_ui *ui)

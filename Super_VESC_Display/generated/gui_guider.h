@@ -27,24 +27,46 @@ typedef struct
 	lv_meter_indicator_t *dashboard_Battery_meter_scale_0_ndline_0;
 	lv_meter_indicator_t *dashboard_Battery_meter_scale_0_arc_0;
 	lv_meter_indicator_t *dashboard_Battery_meter_scale_0_arc_1;
+	lv_obj_t *dashboard_img_2;
+	lv_obj_t *dashboard_img_3;
 	lv_obj_t *dashboard_Current_meter;
 	lv_meter_scale_t *dashboard_Current_meter_scale_0;
 	lv_meter_indicator_t *dashboard_Current_meter_scale_0_ndline_0;
-	lv_meter_indicator_t *dashboard_Current_meter_scale_0_arc_0;
-	lv_meter_indicator_t *dashboard_Current_meter_scale_0_arc_1;
+	lv_meter_indicator_t *dashboard_Current_meter_scale_0_scaleline_0;
 	lv_obj_t *dashboard_Speed_meter;
 	lv_meter_scale_t *dashboard_Speed_meter_scale_0;
 	lv_meter_indicator_t *dashboard_Speed_meter_scale_0_ndline_0;
 	lv_meter_indicator_t *dashboard_Speed_meter_scale_0_arc_0;
+	lv_obj_t *dashboard_img_1;
+	lv_obj_t *dashboard_Speed_text;
 	lv_obj_t *dashboard_odo_text;
-	lv_obj_t *dashboard_canvas_1;
-	lv_obj_t *dashboard_canvas_2;
-	lv_obj_t *dashboard_canvas_3;
 	lv_obj_t *dashboard_ta_1;
 	lv_obj_t *dashboard_ta_2;
-	lv_obj_t *dashboard_Speed_text;
-	lv_obj_t *screen_1;
-	bool screen_1_del;
+	lv_obj_t *dashboard_Battery_proc_text;
+	lv_obj_t *dashboard_ta_4;
+	lv_obj_t *dashboard_TRIP_text;
+	lv_obj_t *dashboard_ta_5;
+	lv_obj_t *dashboard_Voltage_text;
+	lv_obj_t *dashboard_ta_6;
+	lv_obj_t *dashboard_ta_7;
+	lv_obj_t *dashboard_ta_8;
+	lv_obj_t *dashboard_ta_9;
+	lv_obj_t *dashboard_ta_10;
+	lv_obj_t *dashboard_Current_text;
+	lv_obj_t *dashboard_ta_14;
+	lv_obj_t *dashboard_Range_text;
+	lv_obj_t *dashboard_ta_12;
+	lv_obj_t *dashboard_Ah_text;
+	lv_obj_t *dashboard_ta_16;
+	lv_obj_t *dashboard_ta_17;
+	lv_obj_t *dashboard_ta_18;
+	lv_obj_t *dashboard_ta_20;
+	lv_obj_t *dashboard_ta_19;
+	lv_obj_t *dashboard_ta_21;
+	lv_obj_t *dashboard_ta_22;
+	lv_obj_t *dashboard_ta_23;
+	lv_obj_t *dashboard_ta_24;
+	lv_obj_t *dashboard_ta_25;
 }lv_ui;
 
 typedef void (*ui_setup_scr_t)(lv_ui * ui);
@@ -69,16 +91,20 @@ extern lv_ui guider_ui;
 
 
 void setup_scr_dashboard(lv_ui *ui);
-void setup_scr_screen_1(lv_ui *ui);
 
-LV_IMG_DECLARE(_dashboard_480x480);
+LV_IMG_DECLARE(_grid_480_480x480);
+LV_IMG_DECLARE(_trip_alpha_20x24);
+LV_IMG_DECLARE(_battery_alpha_30x35);
+LV_IMG_DECLARE(_speed_background_alpha_162x162);
 
 LV_FONT_DECLARE(lv_font_montserratMedium_13)
 LV_FONT_DECLARE(lv_font_montserratMedium_12)
-LV_FONT_DECLARE(lv_font_Montserrat_I_16)
-LV_FONT_DECLARE(lv_font_montserratMedium_16)
-LV_FONT_DECLARE(lv_font_Montserrat_I_15)
 LV_FONT_DECLARE(lv_font_Montserrat_I_61)
+LV_FONT_DECLARE(lv_font_Montserrat_I_16)
+LV_FONT_DECLARE(lv_font_Montserrat_I_18)
+LV_FONT_DECLARE(lv_font_Montserrat_I_20)
+LV_FONT_DECLARE(lv_font_Montserrat_I_26)
+LV_FONT_DECLARE(lv_font_Montserrat_I_15)
 
 
 #ifdef __cplusplus

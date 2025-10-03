@@ -1,1 +1,1 @@
-GEN_CSRCS += _dashboard_480x480.c
+GEN_CSRCS += _grid_480_480x480.c _trip_alpha_20x24.c _battery_alpha_30x35.c _speed_background_alpha_162x162.c
