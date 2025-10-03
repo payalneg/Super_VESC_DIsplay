@@ -82,3 +82,11 @@ void music_album_next(bool next)
 {
    
 }
+
+void update_current(float current)
+{
+    lv_meter_set_indicator_value(guider_ui.dashboard_Current_meter, guider_ui.dashboard_Current_meter_scale_0_ndline_0, (int)abs(current));
+    char text[10];
+    sprintf(text,"%.1f", current);
+    lv_textarea_set_text(guider_ui.dashboard_Current_text,text);
+}
