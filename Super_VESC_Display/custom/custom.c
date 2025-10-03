@@ -85,8 +85,46 @@ void music_album_next(bool next)
 
 void update_current(float current)
 {
-    lv_meter_set_indicator_value(guider_ui.dashboard_Current_meter, guider_ui.dashboard_Current_meter_scale_0_ndline_0, (int)abs(current));
+    int value = current;
+    int abs_value = abs(value);
+    
+    lv_meter_set_indicator_value(guider_ui.dashboard_Current_meter, guider_ui.dashboard_Current_meter_scale_0_ndline_0, abs_value);
+    
+    if (value>0)
+    {
+        lv_meter_set_indicator_end_value(guider_ui.dashboard_Current_meter, guider_ui.dashboard_Current_meter_scale_0_arc_1, abs_value);
+        lv_meter_set_indicator_end_value(guider_ui.dashboard_Current_meter, guider_ui.dashboard_Current_meter_scale_0_arc_2, 0);
+    }
+    else
+    {
+        lv_meter_set_indicator_end_value(guider_ui.dashboard_Current_meter, guider_ui.dashboard_Current_meter_scale_0_arc_1, 0);
+        lv_meter_set_indicator_end_value(guider_ui.dashboard_Current_meter, guider_ui.dashboard_Current_meter_scale_0_arc_2, abs_value);
+    }
     char text[10];
     sprintf(text,"%.1f", current);
     lv_textarea_set_text(guider_ui.dashboard_Current_text,text);
+}
+
+void update_speed(float speed)
+{
+    int value = speed;
+    
+    lv_meter_set_indicator_value(guider_ui.dashboard_Speed_meter, guider_ui.dashboard_Speed_meter_scale_0_ndline_0, value);
+    lv_meter_set_indicator_end_value(guider_ui.dashboard_Speed_meter, guider_ui.dashboard_Speed_meter_scale_0_arc_0, value);
+    
+    char text[10];
+    sprintf(text,"%d", value);
+    lv_textarea_set_text(guider_ui.dashboard_Speed_text,text);
+}
+
+void update_battery_proc(float battery_proc)
+{
+    int value = battery_proc;
+    
+    lv_meter_set_indicator_value(guider_ui.dashboard_Battery_meter, guider_ui.dashboard_Battery_meter_scale_0_ndline_0, 100-value);
+    lv_meter_set_indicator_start_value(guider_ui.dashboard_Battery_meter, guider_ui.dashboard_Battery_meter_scale_0_arc_1, 100-value);
+    
+    char text[10];
+    sprintf(text,"%d", value);
+    lv_textarea_set_text(guider_ui.dashboard_Battery_proc_text,text);
 }

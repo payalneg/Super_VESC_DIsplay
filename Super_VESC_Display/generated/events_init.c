@@ -17,6 +17,20 @@
 
 #include "custom.h"
 
+static void dashboard_event_handler (lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    switch (code) {
+    case LV_EVENT_SCREEN_LOADED:
+    {
+
+        break;
+    }
+    default:
+        break;
+    }
+}
+
 static void dashboard_slider_1_event_handler (lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -35,9 +49,48 @@ static void dashboard_slider_1_event_handler (lv_event_t *e)
     }
 }
 
+static void dashboard_slider_2_event_handler (lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    switch (code) {
+    case LV_EVENT_VALUE_CHANGED:
+    {
+        {
+            int val;
+            val = (int)lv_slider_get_value(guider_ui.dashboard_slider_2);
+            update_speed(val);
+        }
+        break;
+    }
+    default:
+        break;
+    }
+}
+
+static void dashboard_slider_3_event_handler (lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    switch (code) {
+    case LV_EVENT_VALUE_CHANGED:
+    {
+        {
+            int val;
+            val = (int)lv_slider_get_value(guider_ui.dashboard_slider_3);
+            update_battery_proc(val);
+        }
+        break;
+    }
+    default:
+        break;
+    }
+}
+
 void events_init_dashboard (lv_ui *ui)
 {
+    lv_obj_add_event_cb(ui->dashboard, dashboard_event_handler, LV_EVENT_ALL, ui);
     lv_obj_add_event_cb(ui->dashboard_slider_1, dashboard_slider_1_event_handler, LV_EVENT_ALL, ui);
+    lv_obj_add_event_cb(ui->dashboard_slider_2, dashboard_slider_2_event_handler, LV_EVENT_ALL, ui);
+    lv_obj_add_event_cb(ui->dashboard_slider_3, dashboard_slider_3_event_handler, LV_EVENT_ALL, ui);
 }
 
 

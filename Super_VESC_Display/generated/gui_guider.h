@@ -32,7 +32,9 @@ typedef struct
 	lv_obj_t *dashboard_Current_meter;
 	lv_meter_scale_t *dashboard_Current_meter_scale_0;
 	lv_meter_indicator_t *dashboard_Current_meter_scale_0_ndline_0;
-	lv_meter_indicator_t *dashboard_Current_meter_scale_0_scaleline_0;
+	lv_meter_indicator_t *dashboard_Current_meter_scale_0_arc_0;
+	lv_meter_indicator_t *dashboard_Current_meter_scale_0_arc_1;
+	lv_meter_indicator_t *dashboard_Current_meter_scale_0_arc_2;
 	lv_obj_t *dashboard_Speed_meter;
 	lv_meter_scale_t *dashboard_Speed_meter_scale_0;
 	lv_meter_indicator_t *dashboard_Speed_meter_scale_0_ndline_0;
@@ -68,6 +70,8 @@ typedef struct
 	lv_obj_t *dashboard_ta_24;
 	lv_obj_t *dashboard_ta_25;
 	lv_obj_t *dashboard_slider_1;
+	lv_obj_t *dashboard_slider_2;
+	lv_obj_t *dashboard_slider_3;
 }lv_ui;
 
 typedef void (*ui_setup_scr_t)(lv_ui * ui);

@@ -21,7 +21,10 @@ void speed_meter_timer_cb(lv_timer_t * t);
 void digital_cluster_chart_timer_cb(lv_timer_t * t);
 void play_music(lv_ui *ui);
 void music_album_next(bool next);
+
 void update_current(float current);
+void update_speed(float speed);
+void update_battery_proc(float battery_proc);
 
 #ifdef __cplusplus
 }
