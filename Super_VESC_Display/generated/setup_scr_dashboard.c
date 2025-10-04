@@ -242,7 +242,7 @@ void setup_scr_dashboard(lv_ui *ui)
 #if LV_USE_KEYBOARD != 0 || LV_USE_ZH_KEYBOARD != 0
     lv_obj_add_event_cb(ui->dashboard_Speed_text, ta_event_cb, LV_EVENT_ALL, ui->g_kb_top_layer);
 #endif
-    lv_obj_set_pos(ui->dashboard_Speed_text, 167, 137);
+    lv_obj_set_pos(ui->dashboard_Speed_text, 165, 137);
     lv_obj_set_size(ui->dashboard_Speed_text, 150, 110);
 
     //Write style for dashboard_Speed_text, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
@@ -1283,6 +1283,7 @@ void setup_scr_dashboard(lv_ui *ui)
     lv_slider_set_value(ui->dashboard_slider_1, 50, LV_ANIM_OFF);
     lv_obj_set_pos(ui->dashboard_slider_1, 28, 355);
     lv_obj_set_size(ui->dashboard_slider_1, 418, 15);
+    lv_obj_add_flag(ui->dashboard_slider_1, LV_OBJ_FLAG_HIDDEN);
 
     //Write style for dashboard_slider_1, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
     lv_obj_set_style_bg_opa(ui->dashboard_slider_1, 60, LV_PART_MAIN|LV_STATE_DEFAULT);
@@ -1311,6 +1312,7 @@ void setup_scr_dashboard(lv_ui *ui)
     lv_slider_set_value(ui->dashboard_slider_2, 50, LV_ANIM_OFF);
     lv_obj_set_pos(ui->dashboard_slider_2, 28, 392);
     lv_obj_set_size(ui->dashboard_slider_2, 418, 15);
+    lv_obj_add_flag(ui->dashboard_slider_2, LV_OBJ_FLAG_HIDDEN);
 
     //Write style for dashboard_slider_2, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
     lv_obj_set_style_bg_opa(ui->dashboard_slider_2, 60, LV_PART_MAIN|LV_STATE_DEFAULT);
@@ -1339,6 +1341,7 @@ void setup_scr_dashboard(lv_ui *ui)
     lv_slider_set_value(ui->dashboard_slider_3, 50, LV_ANIM_OFF);
     lv_obj_set_pos(ui->dashboard_slider_3, 28, 430);
     lv_obj_set_size(ui->dashboard_slider_3, 418, 15);
+    lv_obj_add_flag(ui->dashboard_slider_3, LV_OBJ_FLAG_HIDDEN);
 
     //Write style for dashboard_slider_3, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
     lv_obj_set_style_bg_opa(ui->dashboard_slider_3, 60, LV_PART_MAIN|LV_STATE_DEFAULT);
