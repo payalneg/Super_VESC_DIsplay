@@ -241,7 +241,7 @@
 					"type": "slider",
 					"left": 28,
 					"top": 430,
-					"visible": true,
+					"visible": false,
 					"isLock": false,
 					"flag": [],
 					"width": 418,
@@ -446,7 +446,7 @@
 					"type": "slider",
 					"left": 28,
 					"top": 392,
-					"visible": true,
+					"visible": false,
 					"isLock": false,
 					"flag": [],
 					"width": 418,
@@ -651,7 +651,7 @@
 					"type": "slider",
 					"left": 28,
 					"top": 355,
-					"visible": true,
+					"visible": false,
 					"isLock": false,
 					"flag": [],
 					"width": 418,
@@ -3714,7 +3714,7 @@
 									"name": "Speed_text",
 									"id": "uxtp6ss5",
 									"type": "ta",
-									"left": 167,
+									"left": 165,
 									"top": 137,
 									"visible": true,
 									"isLock": true,
@@ -5172,7 +5172,7 @@
 										"visible": true,
 										"flag": [],
 										"pos": [
-											167,
+											165,
 											137
 										],
 										"size": [
@@ -8229,7 +8229,7 @@
 						"name": "dashboard_slider_1",
 						"id": "dqcuoquq",
 						"type": "slider",
-						"visible": true,
+						"visible": false,
 						"flag": [],
 						"pos": [
 							28,
@@ -8441,7 +8441,7 @@
 						"name": "dashboard_slider_2",
 						"id": "hywswq3h",
 						"type": "slider",
-						"visible": true,
+						"visible": false,
 						"flag": [],
 						"pos": [
 							28,
@@ -8653,7 +8653,7 @@
 						"name": "dashboard_slider_3",
 						"id": "dyu01vbh",
 						"type": "slider",
-						"visible": true,
+						"visible": false,
 						"flag": [],
 						"pos": [
 							28,
