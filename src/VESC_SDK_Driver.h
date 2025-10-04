@@ -4,7 +4,7 @@
 #pragma once
 
 // Uncomment to enable detailed CAN debugging
-// #define DEBUG_CAN
+//#define DEBUG_CAN
 
 #include <Arduino.h>
 #include "driver/twai.h"

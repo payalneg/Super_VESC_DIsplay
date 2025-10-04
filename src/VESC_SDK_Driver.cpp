@@ -301,7 +301,7 @@ void VESC_SDK_Loop() {
 #endif
             }
         }
-        else if (packet_type == CAN_PACKET_STATUS_5 && message.data_length_code == 6) {
+        else if (packet_type == CAN_PACKET_STATUS_5 && message.data_length_code == 8) {
             // Parse STATUS_5 packet directly (Tachometer, input voltage)
             vesc_status_msg_5_t status5;
             if (vesc_parse_status_msg_5(message.data, message.data_length_code, &status5)) {
@@ -358,12 +358,12 @@ void VESC_SDK_Loop() {
     */
     
     // Send PING less frequently for connectivity test
-    static unsigned long last_ping_time = 0;
-    if (millis() - last_ping_time > 5000) { // Every 5 seconds
+    //static unsigned long last_ping_time = 0;
+    //if (millis() - last_ping_time > 5000) { // Every 5 seconds
         //Serial.printf("📤 Pinging VESC#%d\n", current_vesc_id);
-        vesc_ping(current_vesc_id);
-        last_ping_time = millis();
-    }
+    //    vesc_ping(current_vesc_id);
+    //    last_ping_time = millis();
+    //}
 }
 
 bool VESC_SDK_IsConnected() {
