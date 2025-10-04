@@ -25,6 +25,12 @@ void music_album_next(bool next);
 void update_current(float current);
 void update_speed(float speed);
 void update_battery_proc(float battery_proc);
+void update_trip(float trip_distance);
+void update_range(float range_distance);
+void update_temp_fet(float temp_fet);
+void update_temp_motor(float temp_motor);
+void update_amp_hours(float amp_hours);
+void update_battery_temp(float battery_temp);
 
 #ifdef __cplusplus
 }

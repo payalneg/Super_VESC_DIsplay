@@ -63,11 +63,11 @@ typedef struct
 	lv_obj_t *dashboard_ta_17;
 	lv_obj_t *dashboard_ta_18;
 	lv_obj_t *dashboard_ta_20;
-	lv_obj_t *dashboard_ta_19;
-	lv_obj_t *dashboard_ta_21;
+	lv_obj_t *dashboard_temp_mot_text;
+	lv_obj_t *dashboard_temp_esc_text;
 	lv_obj_t *dashboard_ta_22;
 	lv_obj_t *dashboard_ta_23;
-	lv_obj_t *dashboard_ta_24;
+	lv_obj_t *dashboard_temp_bat_text;
 	lv_obj_t *dashboard_ta_25;
 	lv_obj_t *dashboard_slider_1;
 	lv_obj_t *dashboard_slider_2;

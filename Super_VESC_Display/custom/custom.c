@@ -128,3 +128,53 @@ void update_battery_proc(float battery_proc)
     sprintf(text,"%d", value);
     lv_textarea_set_text(guider_ui.dashboard_Battery_proc_text,text);
 }
+
+void update_trip(float trip_distance)
+{
+    int value = trip_distance;
+    
+    char text[10];
+    sprintf(text,"%d", value);
+    lv_textarea_set_text(guider_ui.dashboard_TRIP_text,text);
+}
+
+void update_range(float range_distance)
+{
+    int value = range_distance;
+    
+    char text[10];
+    sprintf(text,"%d", value);
+    lv_textarea_set_text(guider_ui.dashboard_Range_text,text);
+}
+
+void update_temp_fet(float temp_fet)
+{
+    int value = temp_fet;
+    char text[10];
+    sprintf(text,"%d", value);
+    lv_textarea_set_text(guider_ui.dashboard_temp_esc_text,text);
+}
+
+void update_temp_motor(float temp_motor)
+{
+    int value = temp_motor;
+    char text[10];
+    sprintf(text,"%d", value);
+    lv_textarea_set_text(guider_ui.dashboard_temp_mot_text,text);
+}
+
+void update_amp_hours(float amp_hours)
+{
+    char text[10];
+    sprintf(text,"%.1f", amp_hours);
+    lv_textarea_set_text(guider_ui.dashboard_Ah_text,text);
+}
+
+void update_battery_temp(float battery_temp)
+{
+    int value = battery_temp;
+    char text[10];
+    sprintf(text,"%d", value);
+
+    lv_textarea_set_text(guider_ui.dashboard_temp_bat_text,text);
+}
