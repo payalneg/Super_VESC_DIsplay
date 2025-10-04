@@ -52,8 +52,10 @@ void MyCallbacks::onWrite(BLECharacteristic *pCharacteristic)
       // For now, just store in buffer for future CAN transmission
       for (int i = 0; i < rxValue.length(); i++)
       {
+        Serial.printf("%02x ", rxValue[i]);
         vescBuffer.push_back(rxValue[i]);
       }
+      Serial.println();
     }
   }
 }
