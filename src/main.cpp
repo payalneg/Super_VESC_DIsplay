@@ -6,19 +6,25 @@
 
 /*
  * BLE-CAN Bridge Integration:
- * - Full BLE-CAN bridge using official VESC fragmentation protocol! 🎉🔥
+ * - Full BLE-CAN bridge using FIFO queue + VESC fragmentation protocol! 🎉🔥⚡
  * - BLE service acts as a bidirectional bridge between mobile apps and VESC
+ * - Non-blocking FIFO queue for BLE commands (processed in main loop)
  * - Uses comm_can_send_buffer protocol for proper VESC command transmission
  * - Real-time CAN message forwarding: VESC -> BLE and BLE -> VESC
  * - Automatic fragmentation for large commands (>6 bytes)
  * - Compatible with official VESC Tool and mobile apps
  * - Device name: "SuperVESCDisplay"
  * 
+ * Architecture:
+ * - BLE callback -> FIFO queue (non-blocking)
+ * - Main loop -> Process FIFO queue -> Send to VESC
+ * - VESC responses -> BLE TX (real-time)
+ * 
  * Supported BLE Commands:
  * - Text: "DUTY:0.5", "CURR:10.0", "RPM:5000", "STATUS", "FW_VERSION", "GET_VALUES"
  * - Binary: Full VESC COMM_* command support with proper fragmentation
  * - CAN: Raw CAN packet format support
- * - All commands routed through official VESC fragmentation protocol
+ * - All commands routed through FIFO queue + VESC fragmentation protocol
  */
 
 #include "Display_ST7701.h"

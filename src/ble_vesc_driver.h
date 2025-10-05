@@ -5,6 +5,8 @@
 #include <NimBLEDevice.h>
 #include "VESC_SDK_Driver.h"
 #include "driver/twai.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
 
 // CAN Message Structure for BLE transmission
 typedef struct {
@@ -12,6 +14,15 @@ typedef struct {
     uint8_t data_length;
     uint8_t data[8];
 } ble_can_message_t;
+
+// BLE Command Buffer Structure for FIFO
+#define BLE_CMD_BUFFER_SIZE 256
+typedef struct {
+    uint8_t data[BLE_CMD_BUFFER_SIZE];
+    uint16_t length;
+    uint8_t target_vesc_id;
+    uint8_t send_type;
+} ble_command_t;
 
 // BLE Configuration
 extern int MTU_SIZE;
@@ -51,5 +62,10 @@ void BLE_ProcessReceivedData();
 void BLE_SendRawCANMessage(uint32_t can_id, uint8_t* data, uint8_t len);
 bool BLE_ProcessCANCommand(uint8_t* data, uint8_t len);
 void BLE_ForwardCANToVESC(uint8_t* can_data, uint8_t len);
+
+// FIFO Buffer Functions
+bool BLE_InitCommandQueue();
+bool BLE_QueueCommand(uint8_t* data, uint16_t length, uint8_t target_vesc_id, uint8_t send_type);
+void BLE_ProcessCommandQueue();
 
 #endif // BLE_VESC_DRIVER_H

@@ -16,6 +16,10 @@ static NimBLECharacteristic *pCharacteristicVescRx = nullptr;
 static std::string vescBuffer;
 static std::string updateBuffer;
 
+// FIFO Command Queue
+#define BLE_QUEUE_SIZE 10
+static QueueHandle_t ble_command_queue = NULL;
+
 // BLE Server Callbacks Implementation
 void MyServerCallbacks::onConnect(NimBLEServer *pServer, ble_gap_conn_desc *desc)
 {
@@ -53,14 +57,16 @@ void MyCallbacks::onWrite(BLECharacteristic *pCharacteristic)
       }
       Serial.println();
       
-      // Send data directly to VESC using comm_can_send_buffer protocol
+      // Queue command for processing in main loop (non-blocking)
       uint8_t target_vesc_id = VESC_CAN_ID; // Use configured VESC CAN ID
       uint8_t send_type = 0; // 0 = process and send response back
       
-      // Send the received data to VESC using proper fragmentation
-      VESC_SDK_SendCommandBuffer(target_vesc_id, (uint8_t*)rxValue.data(), rxValue.length(), send_type);
-      
-      Serial.printf("🔗 BLE->CAN: Forwarded %d bytes to VESC %d\n", rxValue.length(), target_vesc_id);
+      // Queue the received data for processing in main loop
+      if (BLE_QueueCommand((uint8_t*)rxValue.data(), rxValue.length(), target_vesc_id, send_type)) {
+        Serial.printf("📥 BLE->Queue: Queued %d bytes for VESC %d\n", rxValue.length(), target_vesc_id);
+      } else {
+        Serial.printf("❌ BLE->Queue: Failed to queue %d bytes\n", rxValue.length());
+      }
     }
   }
 }
@@ -104,6 +110,11 @@ bool BLE_Init() {
     pAdvertising->start();
     
     Serial.println("🔵 BLE Server initialized - waiting for client connection...");
+    
+    // Initialize command queue
+    if (!BLE_InitCommandQueue()) {
+      return false;
+    }
     
     // Set up CAN bridge callback to forward VESC messages to BLE
     VESC_SDK_SetCANBridgeCallback(BLE_SendRawCANMessage);
@@ -308,10 +319,12 @@ void BLE_ProcessReceivedData() {
         uint8_t target_vesc_id = VESC_CAN_ID; // Use configured VESC CAN ID
         uint8_t send_type = 0; // 0 = process and send response back
         
-        // Send using proper VESC fragmentation protocol
-        VESC_SDK_SendCommandBuffer(target_vesc_id, (uint8_t*)vescBuffer.data(), vescBuffer.length(), send_type);
-        
-        Serial.printf("🔗 BLE->CAN: Sent VESC command buffer (%d bytes) to VESC %d\n", vescBuffer.length(), target_vesc_id);
+        // Queue using proper VESC fragmentation protocol
+        if (BLE_QueueCommand((uint8_t*)vescBuffer.data(), vescBuffer.length(), target_vesc_id, send_type)) {
+          Serial.printf("📥 BLE->Queue: Queued VESC command buffer (%d bytes) for VESC %d\n", vescBuffer.length(), target_vesc_id);
+        } else {
+          Serial.printf("❌ BLE->Queue: Failed to queue VESC command buffer (%d bytes)\n", vescBuffer.length());
+        }
         vescBuffer.clear();
         return;
       }
@@ -350,11 +363,11 @@ void BLE_ProcessReceivedData() {
       } else if (command == "FW_VERSION") {
         Serial.println("🎯 BLE: Text command - Requesting firmware version");
         uint8_t fw_cmd = 0x00; // COMM_FW_VERSION
-        VESC_SDK_SendCommandBuffer(VESC_CAN_ID, &fw_cmd, 1, 0);
+        BLE_QueueCommand(&fw_cmd, 1, VESC_CAN_ID, 0);
       } else if (command == "GET_VALUES") {
         Serial.println("🎯 BLE: Text command - Requesting values");
         uint8_t get_cmd = 0x04; // COMM_GET_VALUES
-        VESC_SDK_SendCommandBuffer(VESC_CAN_ID, &get_cmd, 1, 0);
+        BLE_QueueCommand(&get_cmd, 1, VESC_CAN_ID, 0);
       } else {
         Serial.printf("⚠️  BLE: Unknown text command: %s\n", command.c_str());
       }
@@ -366,8 +379,11 @@ void BLE_ProcessReceivedData() {
 
 // Main BLE processing loop
 void BLE_Loop() {
-  // Process any received data
-  BLE_ProcessReceivedData();
+  // Process command queue (FIFO)
+  BLE_ProcessCommandQueue();
+  
+  // Process any buffered received data (legacy)
+  //BLE_ProcessReceivedData();
   
   // Send VESC data if connected and VESC is available
   if (deviceConnected && VESC_SDK_IsConnected()) {
@@ -389,5 +405,63 @@ void BLE_Loop() {
   if (deviceConnected && !oldDeviceConnected) {
     Serial.println("🔵 BLE: Client connected and ready");
     oldDeviceConnected = deviceConnected;
+  }
+}
+
+// Initialize FIFO command queue
+bool BLE_InitCommandQueue() {
+  ble_command_queue = xQueueCreate(BLE_QUEUE_SIZE, sizeof(ble_command_t));
+  if (ble_command_queue == NULL) {
+    Serial.println("❌ BLE: Failed to create command queue");
+    return false;
+  }
+  Serial.printf("✅ BLE: Command queue initialized (size: %d)\n", BLE_QUEUE_SIZE);
+  return true;
+}
+
+// Queue a command for processing in main loop
+bool BLE_QueueCommand(uint8_t* data, uint16_t length, uint8_t target_vesc_id, uint8_t send_type) {
+  if (ble_command_queue == NULL) {
+    Serial.println("❌ BLE: Command queue not initialized");
+    return false;
+  }
+  
+  if (length > BLE_CMD_BUFFER_SIZE) {
+    Serial.printf("❌ BLE: Command too large (%d > %d bytes)\n", length, BLE_CMD_BUFFER_SIZE);
+    return false;
+  }
+  
+  ble_command_t cmd;
+  memcpy(cmd.data, data, length);
+  cmd.length = length;
+  cmd.target_vesc_id = target_vesc_id;
+  cmd.send_type = send_type;
+  
+  BaseType_t result = xQueueSend(ble_command_queue, &cmd, 0); // Non-blocking
+  if (result != pdTRUE) {
+    Serial.println("⚠️  BLE: Command queue full, dropping command");
+    return false;
+  }
+  
+  Serial.printf("📥 BLE: Queued command (%d bytes) for VESC %d\n", length, target_vesc_id);
+  return true;
+}
+
+// Process commands from FIFO queue (called from main loop)
+void BLE_ProcessCommandQueue() {
+  if (ble_command_queue == NULL) {
+    return;
+  }
+  
+  ble_command_t cmd;
+  while (xQueueReceive(ble_command_queue, &cmd, 0) == pdTRUE) { // Non-blocking
+    Serial.printf("🔄 BLE: Processing queued command (%d bytes) to VESC %d\n", 
+                  cmd.length, cmd.target_vesc_id);
+    
+    // Send command using VESC fragmentation protocol
+    VESC_SDK_SendCommandBuffer(cmd.target_vesc_id, cmd.data, cmd.length, cmd.send_type);
+    
+    Serial.printf("✅ BLE: Sent queued command (%d bytes) to VESC %d\n", 
+                  cmd.length, cmd.target_vesc_id);
   }
 }
