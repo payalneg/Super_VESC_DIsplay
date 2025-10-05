@@ -24,10 +24,11 @@ bool can_send_function(uint32_t id, uint8_t* data, uint8_t len) {
         Serial.println("❌ TWAI not initialized for CAN send");
         return false;
     }
-    
+
+    //Serial.printf("🔗 BLE->CAN: Sending message ID=0x%03X, Len=%d\n", id, len);
     twai_message_t message;
     message.identifier = id;
-    message.extd = 0;  // Standard frame
+    message.extd = 1;  // Standard frame
     message.rtr = 0;   // Data frame
     message.data_length_code = len;
     
@@ -368,7 +369,7 @@ void VESC_SDK_Loop() {
     // Send PING less frequently for connectivity test
     //static unsigned long last_ping_time = 0;
     //if (millis() - last_ping_time > 5000) { // Every 5 seconds
-        //Serial.printf("📤 Pinging VESC#%d\n", current_vesc_id);
+    //    Serial.printf("📤 Pinging VESC#%d\n", current_vesc_id);
     //    vesc_ping(current_vesc_id);
     //    last_ping_time = millis();
     //}
