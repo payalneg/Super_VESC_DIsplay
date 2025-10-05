@@ -89,4 +89,12 @@ void VESC_SDK_Ping();
 // Debug Functions
 void VESC_SDK_PrintDebug();
 
+// CAN Bridge Functions
+typedef void (*vesc_can_bridge_callback_t)(uint32_t can_id, uint8_t* data, uint8_t len);
+void VESC_SDK_SetCANBridgeCallback(vesc_can_bridge_callback_t callback);
+bool VESC_SDK_SendRawCAN(uint32_t can_id, uint8_t* data, uint8_t len);
+
+// VESC Command Buffer Functions (based on comm_can_send_buffer)
+void VESC_SDK_SendCommandBuffer(uint8_t controller_id, uint8_t* data, unsigned int len, uint8_t send_type);
+
 #endif // __VESC_SDK_DRIVER_H

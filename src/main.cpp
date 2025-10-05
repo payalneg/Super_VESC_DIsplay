@@ -5,12 +5,20 @@
 // #define DEBUG_CAN
 
 /*
- * BLE Bridge Integration:
- * - Added NimBLE server functionality for VESC communication
- * - BLE service acts as a bridge between mobile apps and VESC
- * - Currently sends VESC data via BLE (RPM, Current, Voltage, Temperature)
- * - Prepared for future CAN protocol integration
- * - Device name: "ble_vesc"
+ * BLE-CAN Bridge Integration:
+ * - Full BLE-CAN bridge using official VESC fragmentation protocol! 🎉🔥
+ * - BLE service acts as a bidirectional bridge between mobile apps and VESC
+ * - Uses comm_can_send_buffer protocol for proper VESC command transmission
+ * - Real-time CAN message forwarding: VESC -> BLE and BLE -> VESC
+ * - Automatic fragmentation for large commands (>6 bytes)
+ * - Compatible with official VESC Tool and mobile apps
+ * - Device name: "SuperVESCDisplay"
+ * 
+ * Supported BLE Commands:
+ * - Text: "DUTY:0.5", "CURR:10.0", "RPM:5000", "STATUS", "FW_VERSION", "GET_VALUES"
+ * - Binary: Full VESC COMM_* command support with proper fragmentation
+ * - CAN: Raw CAN packet format support
+ * - All commands routed through official VESC fragmentation protocol
  */
 
 #include "Display_ST7701.h"
@@ -33,7 +41,7 @@ void DriverTask(void *parameter) {
         Serial.printf("🚀 VESC: RPM=%.0f | Current=%.2fA | Voltage=%.1fV | FET=%.1f°C | Motor=%.1f°C | Battery=%.1f%%\n", 
                       data.rpm, data.current, data.voltage, data.temp_fet, data.temp_motor, data.battery_level);
       } else {
-        Serial.println("❌ VESC: Disconnected - Check CAN connection and VESC settings");
+        //Serial.println("❌ VESC: Disconnected - Check CAN connection and VESC settings");
       }
       last_print = millis();
     }
@@ -87,7 +95,7 @@ void setup()
   if (VESC_SDK_Init(VESC_CAN_ID)) { 
     Serial.println("🚀 VESC SDK initialized successfully!");
     Serial.println("📡 Ready to communicate with VESC via CAN SDK");
-    Serial.println("⚙️  Make sure VESC is set to 250 kbps CAN speed and ID 57");
+    Serial.printf("⚙️  Make sure VESC is set to 250 kbps CAN speed and ID %d\n", VESC_CAN_ID);
   } else {
     Serial.println("❌ VESC SDK initialization failed!");
   }

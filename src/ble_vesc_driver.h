@@ -4,6 +4,14 @@
 #include <Arduino.h>
 #include <NimBLEDevice.h>
 #include "VESC_SDK_Driver.h"
+#include "driver/twai.h"
+
+// CAN Message Structure for BLE transmission
+typedef struct {
+    uint32_t can_id;
+    uint8_t data_length;
+    uint8_t data[8];
+} ble_can_message_t;
 
 // BLE Configuration
 extern int MTU_SIZE;
@@ -38,5 +46,10 @@ void BLE_Loop();
 bool BLE_IsConnected();
 void BLE_SendVescData(const vesc_sdk_data_t& data);
 void BLE_ProcessReceivedData();
+
+// CAN Bridge Functions
+void BLE_SendRawCANMessage(uint32_t can_id, uint8_t* data, uint8_t len);
+bool BLE_ProcessCANCommand(uint8_t* data, uint8_t len);
+void BLE_ForwardCANToVESC(uint8_t* can_data, uint8_t len);
 
 #endif // BLE_VESC_DRIVER_H

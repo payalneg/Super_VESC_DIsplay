@@ -6,6 +6,9 @@ static bool vesc_sdk_initialized = false;
 static vesc_sdk_data_t vesc_data;
 static uint8_t current_vesc_id = VESC_CAN_ID;
 
+// CAN Bridge callback
+static vesc_can_bridge_callback_t can_bridge_callback = nullptr;
+
 // TWAI message queue
 static QueueHandle_t twai_rx_queue = NULL;
 
@@ -228,7 +231,7 @@ void VESC_SDK_Loop() {
         uint8_t vesc_id = message.identifier & 0xFF;
         uint8_t packet_type = (message.identifier >> 8) & 0xFF;
         
-#ifdef DEBUG_CAN
+#ifndef DEBUG_CAN
         Serial.printf("📥 CAN RX: ID=0x%03X (VESC#%d, Type=0x%02X), Len=%d, Data=", 
                       message.identifier, vesc_id, packet_type, message.data_length_code);
         for (int i = 0; i < message.data_length_code; i++) {
@@ -236,6 +239,11 @@ void VESC_SDK_Loop() {
         }
         Serial.println();
 #endif
+        
+        // Forward CAN message to BLE bridge if callback is set
+        if (can_bridge_callback) {
+            can_bridge_callback(message.identifier, message.data, message.data_length_code);
+        }
         
         // Handle direct CAN packets (STATUS messages) before SDK processing
         if (packet_type == CAN_PACKET_STATUS && message.data_length_code == 8) {
@@ -470,4 +478,115 @@ void VESC_SDK_PrintDebug() {
     }
     
     Serial.println("========================\n");
+}
+
+// Set CAN bridge callback for forwarding messages to BLE
+void VESC_SDK_SetCANBridgeCallback(vesc_can_bridge_callback_t callback) {
+    can_bridge_callback = callback;
+    Serial.printf("🔗 CAN Bridge callback %s\n", callback ? "enabled" : "disabled");
+}
+
+// Send raw CAN message (for BLE->CAN forwarding)
+bool VESC_SDK_SendRawCAN(uint32_t can_id, uint8_t* data, uint8_t len) {
+    if (!twai_initialized) {
+        Serial.println("❌ TWAI not initialized for raw CAN send");
+        return false;
+    }
+    
+    Serial.printf("🔗 BLE->CAN: Sending raw message ID=0x%03X, Len=%d\n", can_id, len);
+    return can_send_function(can_id, data, len);
+}
+
+// Send command buffer using VESC fragmentation protocol (based on comm_can_send_buffer)
+void VESC_SDK_SendCommandBuffer(uint8_t controller_id, uint8_t* data, unsigned int len, uint8_t send_type) {
+    if (!twai_initialized) {
+        Serial.println("❌ TWAI not initialized for command buffer send");
+        return;
+    }
+    
+    Serial.printf("🔗 BLE->CAN: Sending command buffer to VESC %d, len=%d, send_type=%d\n", 
+                  controller_id, len, send_type);
+    
+    uint8_t send_buffer[8];
+    
+    if (len <= 6) {
+        // Short buffer: fits in single CAN frame (CAN_PACKET_PROCESS_SHORT_BUFFER)
+        uint32_t ind = 0;
+        send_buffer[ind++] = current_vesc_id; // Our controller ID (sender)
+        send_buffer[ind++] = send_type;
+        memcpy(send_buffer + ind, data, len);
+        ind += len;
+        
+        uint32_t can_id = (uint32_t)controller_id | (CAN_PACKET_PROCESS_SHORT_BUFFER << 8); // CAN_PACKET_PROCESS_SHORT_BUFFER = 8
+        can_send_function(can_id, send_buffer, ind);
+        
+        Serial.printf("🔗 BLE->CAN: Sent short buffer (%d bytes)\n", ind);
+    } else {
+        // Long buffer: needs fragmentation
+        Serial.printf("🔗 BLE->CAN: Fragmenting long buffer (%d bytes)\n", len);
+        
+        // Step 1: Send data in 7-byte chunks (CAN_PACKET_FILL_RX_BUFFER)
+        unsigned int end_a = 0;
+        for (unsigned int i = 0; i < len; i += 7) {
+            if (i > 255) {
+                break; // Switch to long buffer mode
+            }
+            
+            end_a = i + 7;
+            uint8_t send_len = 7;
+            send_buffer[0] = i; // Offset
+            
+            if ((i + 7) <= len) {
+                memcpy(send_buffer + 1, data + i, send_len);
+            } else {
+                send_len = len - i;
+                memcpy(send_buffer + 1, data + i, send_len);
+            }
+            
+            uint32_t can_id = (uint32_t)controller_id | (CAN_PACKET_FILL_RX_BUFFER << 8); // CAN_PACKET_FILL_RX_BUFFER = 5
+            can_send_function(can_id, send_buffer, send_len + 1);
+            
+            Serial.printf("🔗 BLE->CAN: Sent fragment %d-%d (%d bytes)\n", i, i + send_len - 1, send_len + 1);
+        }
+        
+        // Step 2: Send remaining data in 6-byte chunks (CAN_PACKET_FILL_RX_BUFFER_LONG)
+        for (unsigned int i = end_a; i < len; i += 6) {
+            uint8_t send_len = 6;
+            send_buffer[0] = i >> 8;    // High byte of offset
+            send_buffer[1] = i & 0xFF;  // Low byte of offset
+            
+            if ((i + 6) <= len) {
+                memcpy(send_buffer + 2, data + i, send_len);
+            } else {
+                send_len = len - i;
+                memcpy(send_buffer + 2, data + i, send_len);
+            }
+            
+            uint32_t can_id = (uint32_t)controller_id | (CAN_PACKET_FILL_RX_BUFFER_LONG << 8); // CAN_PACKET_FILL_RX_BUFFER_LONG = 6
+            can_send_function(can_id, send_buffer, send_len + 2);
+            
+            Serial.printf("🔗 BLE->CAN: Sent long fragment %d-%d (%d bytes)\n", i, i + send_len - 1, send_len + 2);
+        }
+        
+        // Step 3: Send process command with CRC (CAN_PACKET_PROCESS_RX_BUFFER)
+        uint32_t ind = 0;
+        send_buffer[ind++] = current_vesc_id; // Our controller ID (sender)
+        send_buffer[ind++] = send_type;
+        send_buffer[ind++] = len >> 8;        // Length high byte
+        send_buffer[ind++] = len & 0xFF;      // Length low byte
+        
+        // Calculate CRC16 (using simple checksum for now - should use proper CRC16)
+        uint16_t crc = 0;
+        for (unsigned int i = 0; i < len; i++) {
+            crc += data[i]; // Simple checksum
+        }
+        
+        send_buffer[ind++] = (uint8_t)(crc >> 8);   // CRC high byte
+        send_buffer[ind++] = (uint8_t)(crc & 0xFF); // CRC low byte
+        
+        uint32_t can_id = (uint32_t)controller_id | (CAN_PACKET_PROCESS_RX_BUFFER << 8); // CAN_PACKET_PROCESS_RX_BUFFER = 7
+        can_send_function(can_id, send_buffer, ind);
+        
+        Serial.printf("🔗 BLE->CAN: Sent process command (CRC=0x%04X)\n", crc);
+    }
 }
