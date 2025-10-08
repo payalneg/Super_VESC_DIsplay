@@ -18,7 +18,8 @@
  * Architecture:
  * - BLE callback -> FIFO queue (non-blocking)
  * - Main loop -> Process FIFO queue -> Send to VESC
- * - VESC responses -> BLE TX (real-time)
+ * - VESC responses (CAN_PACKET_PROCESS_*) -> BLE TX (real-time)
+ * - Automatic response type detection (FW_VERSION, GET_VALUES, etc.)
  * 
  * Supported BLE Commands:
  * - Text: "DUTY:0.5", "CURR:10.0", "RPM:5000", "STATUS", "FW_VERSION", "GET_VALUES"

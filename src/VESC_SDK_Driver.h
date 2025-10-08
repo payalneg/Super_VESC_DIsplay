@@ -12,6 +12,12 @@
 // VESC CAN SDK
 #include "vesc_can_sdk.h"
 
+// VESC CAN Packet Types (from vesc_can_sdk.h)
+#ifndef CAN_PACKET_PROCESS_RX_BUFFER
+#define CAN_PACKET_PROCESS_RX_BUFFER               7
+#define CAN_PACKET_PROCESS_SHORT_BUFFER            8
+#endif
+
 // Hardware Configuration
 #define VESC_CAN_TX_GPIO_NUM GPIO_NUM_6
 #define VESC_CAN_RX_GPIO_NUM GPIO_NUM_0

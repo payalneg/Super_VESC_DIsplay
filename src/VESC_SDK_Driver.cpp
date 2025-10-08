@@ -232,7 +232,7 @@ void VESC_SDK_Loop() {
         uint8_t vesc_id = message.identifier & 0xFF;
         uint8_t packet_type = (message.identifier >> 8) & 0xFF;
         
-#ifndef DEBUG_CAN
+#ifdef DEBUG_CAN
         Serial.printf("📥 CAN RX: ID=0x%03X (VESC#%d, Type=0x%02X), Len=%d, Data=", 
                       message.identifier, vesc_id, packet_type, message.data_length_code);
         for (int i = 0; i < message.data_length_code; i++) {
@@ -241,13 +241,22 @@ void VESC_SDK_Loop() {
         Serial.println();
 #endif
         
-        // Forward CAN message to BLE bridge if callback is set
-        if (can_bridge_callback) {
-            can_bridge_callback(message.identifier, message.data, message.data_length_code);
+        // Handle VESC response packets (PROCESS_RX_BUFFER responses) - these are special
+        if (packet_type == CAN_PACKET_PROCESS_RX_BUFFER || packet_type == CAN_PACKET_PROCESS_SHORT_BUFFER) {
+            Serial.printf("📥 VESC Response: Type=0x%02X, VESC#%d, Len=%d, Data=", 
+                          packet_type, vesc_id, message.data_length_code);
+            for (int i = 0; i < message.data_length_code; i++) {
+                Serial.printf("%02X ", message.data[i]);
+            }
+            Serial.println();
+            
+            // Forward response to BLE (if callback is set) - this will be handled specially
+            if (can_bridge_callback) {
+                can_bridge_callback(message.identifier, message.data, message.data_length_code);
+            }
         }
-        
         // Handle direct CAN packets (STATUS messages) before SDK processing
-        if (packet_type == CAN_PACKET_STATUS && message.data_length_code == 8) {
+        else if (packet_type == CAN_PACKET_STATUS && message.data_length_code == 8) {
             // Parse STATUS packet directly (RPM, current, duty)
             vesc_status_msg_1_t status;
             if (vesc_parse_status_msg_1(message.data, message.data_length_code, &status)) {

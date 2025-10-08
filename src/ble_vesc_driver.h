@@ -24,6 +24,15 @@ typedef struct {
     uint8_t send_type;
 } ble_command_t;
 
+// VESC Response Types (for better response handling)
+typedef enum {
+    VESC_RESP_UNKNOWN = 0,
+    VESC_RESP_FW_VERSION,
+    VESC_RESP_GET_VALUES,
+    VESC_RESP_PING,
+    VESC_RESP_GENERIC
+} vesc_response_type_t;
+
 // BLE Configuration
 extern int MTU_SIZE;
 extern int PACKET_SIZE;
@@ -62,6 +71,7 @@ void BLE_ProcessReceivedData();
 void BLE_SendRawCANMessage(uint32_t can_id, uint8_t* data, uint8_t len);
 bool BLE_ProcessCANCommand(uint8_t* data, uint8_t len);
 void BLE_ForwardCANToVESC(uint8_t* can_data, uint8_t len);
+void BLE_SendVESCResponse(uint32_t can_id, uint8_t* data, uint8_t len);
 
 // FIFO Buffer Functions
 bool BLE_InitCommandQueue();
