@@ -38,133 +38,11 @@
 #include "ble_vesc_driver.h"         // BLE VESC Bridge
 #include "buffer.h"                  // Buffer utility functions
 #include "datatypes.h"               // VESC data types
-
-// Firmware version (compatible with most VESC Tool versions)
-#define FW_VERSION_MAJOR  6
-#define FW_VERSION_MINOR  5   // Version 5.03 for maximum compatibility
-#define FW_TEST_VERSION   0
-#define HW_NAME           "VESC Express T"
-#define FW_NAME           ""  // Empty by default, like in VESC Express
-
-// VESC Command Handler - processes incoming VESC commands and sends responses
-void VESC_Command_Handler(unsigned char *data, unsigned int len) {
-  if (len < 1) return;
-  
-  uint8_t cmd = data[0];
-  static uint32_t msg_count = 0;
-  msg_count++;
-  
-  // Log incoming command
-  Serial.printf("[CAN CMD #%04d] Len=%d, CMD=0x%02X ", msg_count, len, cmd);
-  
-  switch (cmd) {
-    case 0x00: { // COMM_FW_VERSION
-      Serial.println("(FW_VERSION) - Sending response");
-      
-      uint8_t send_buffer[80];
-      int32_t ind = 0;
-      
-      send_buffer[ind++] = 0x00; // COMM_FW_VERSION
-      send_buffer[ind++] = FW_VERSION_MAJOR;
-      send_buffer[ind++] = FW_VERSION_MINOR;
-      
-      // Hardware name (null-terminated string)
-      strcpy((char*)(send_buffer + ind), HW_NAME);
-      ind += strlen(HW_NAME) + 1;
-      
-      // MAC address (6 bytes) - get ESP32 MAC
-      uint8_t mac[6];
-      esp_read_mac(mac, ESP_MAC_WIFI_STA);
-      memcpy(send_buffer + ind, mac, 6);
-      ind += 6;
-      
-      // UUID (6 bytes) - zeros for now
-      memset(send_buffer + ind, 0, 6);
-      ind += 6;
-      
-      send_buffer[ind++] = 0; // Pairing done
-      send_buffer[ind++] = FW_TEST_VERSION;
-      send_buffer[ind++] = HW_TYPE_CUSTOM_MODULE; // HW Type
-      send_buffer[ind++] = 1; // One custom config
-      send_buffer[ind++] = 0; // No phase filters
-      send_buffer[ind++] = 0; // No HW QML
-      send_buffer[ind++] = 0; // QML flags
-      send_buffer[ind++] = 0; // No NRF flags
-      
-      // Firmware name (null-terminated string) - use HW_NAME if FW_NAME is empty
-      if (strlen(FW_NAME) == 0) {
-        strcpy((char*)(send_buffer + ind), HW_NAME);
-        ind += strlen(HW_NAME) + 1;
-      } else {
-        strcpy((char*)(send_buffer + ind), FW_NAME);
-        ind += strlen(FW_NAME) + 1;
-      }
-      
-      // HW CRC (4 bytes)
-      uint32_t hw_crc = 0x12345678; // Dummy CRC
-      buffer_append_uint32(send_buffer, hw_crc, &ind);
-      
-      comm_can_send_buffer(255, send_buffer, ind, 1); // Send to broadcast
-      Serial.printf("✅ FW_VERSION response sent: %s v%d.%02d\n", HW_NAME, FW_VERSION_MAJOR, FW_VERSION_MINOR);
-    } break;
-    
-    case 0x04: { // COMM_GET_VALUES
-      Serial.println("(GET_VALUES) - Sending dummy response");
-      
-      uint8_t send_buffer[70];
-      int32_t ind = 0;
-      
-      send_buffer[ind++] = 0x04; // COMM_GET_VALUES
-      
-      // Send dummy values for now
-      buffer_append_float16(send_buffer, 0.0, 1e3, &ind);     // temp_mos
-      buffer_append_float16(send_buffer, 0.0, 1e3, &ind);     // temp_motor  
-      buffer_append_float32(send_buffer, 0.0, 1e2, &ind);     // avg_motor_current
-      buffer_append_float32(send_buffer, 0.0, 1e2, &ind);     // avg_input_current
-      buffer_append_float32(send_buffer, 0.0, 1e2, &ind);     // avg_id
-      buffer_append_float32(send_buffer, 0.0, 1e2, &ind);     // avg_iq
-      buffer_append_float16(send_buffer, 0.0, 1e1, &ind);     // duty_now
-      buffer_append_float32(send_buffer, 0.0, 1e0, &ind);     // rpm
-      buffer_append_float16(send_buffer, 24.0, 1e1, &ind);    // v_in (24V)
-      buffer_append_float32(send_buffer, 0.0, 1e4, &ind);     // amp_hours
-      buffer_append_float32(send_buffer, 0.0, 1e4, &ind);     // amp_hours_charged
-      buffer_append_float32(send_buffer, 0.0, 1e4, &ind);     // watt_hours
-      buffer_append_float32(send_buffer, 0.0, 1e4, &ind);     // watt_hours_charged
-      buffer_append_int32(send_buffer, 0, &ind);              // tachometer
-      buffer_append_int32(send_buffer, 0, &ind);              // tachometer_abs
-      send_buffer[ind++] = 0;                                 // mc_fault_code
-      buffer_append_int32(send_buffer, 0, &ind);              // pid_pos
-      send_buffer[ind++] = 0;                                 // app_controller_id
-      buffer_append_float16(send_buffer, 0.0, 1e3, &ind);     // temp_mos_1
-      buffer_append_float16(send_buffer, 0.0, 1e3, &ind);     // temp_mos_2
-      buffer_append_float16(send_buffer, 0.0, 1e3, &ind);     // temp_mos_3
-      buffer_append_float32(send_buffer, 0.0, 1e5, &ind);     // avg_vd
-      buffer_append_float32(send_buffer, 0.0, 1e5, &ind);     // avg_vq
-      
-      comm_can_send_buffer(255, send_buffer, ind, 1);
-      Serial.println("✅ GET_VALUES response sent");
-    } break;
-    
-    case 0x05: Serial.println("(SET_DUTY)"); break;
-    case 0x06: Serial.println("(SET_CURRENT)"); break;
-    case 0x08: Serial.println("(SET_RPM)"); break;
-    
-    default:
-      Serial.println("(Unknown command)");
-      break;
-  }
-  
-  // Also log raw HEX for debugging
-  Serial.print("    Raw: ");
-  for (unsigned int i = 0; i < len && i < 16; i++) {
-    Serial.printf("%02X ", data[i]);
-  }
-  Serial.println();
-}
+#include "vesc_handler.h"            // VESC command handler
 
 void DriverTask(void *parameter) {
-  Serial.println("\n🚀 DriverTask started - VESC Command Handler enabled");
-  Serial.printf("📡 Listening on CAN: TX=GPIO6, RX=GPIO0, Speed=250kbps, Device ID=2\n");
+  Serial.println("\n🚀 DriverTask started - VESC Handler enabled");
+  Serial.printf("📡 Listening on CAN: TX=GPIO6, RX=GPIO0, Speed=250kbps, Device ID=%d\n", CONF_CONTROLLER_ID);
   Serial.println("📋 All VESC commands will be processed and responded\n");
   
   while(1){
@@ -205,12 +83,15 @@ void setup()
   // Initialize I2C for other peripherals on different pins
   I2C_Init();
   
+  // Initialize VESC handler
+  vesc_handler_init();
+  
   // Initialize CAN communication
-  uint8_t vesc_can_id = 2;  // CAN ID for this device (same as VESC Express T)
+  uint8_t vesc_can_id = CONF_CONTROLLER_ID;
   comm_can_start(GPIO_NUM_6, GPIO_NUM_0, vesc_can_id);
   
   // Set VESC command handler callback
-  comm_can_set_packet_handler(VESC_Command_Handler);
+  comm_can_set_packet_handler(vesc_handler_process_command);
   
   Serial.println("\n╔════════════════════════════════════════════════╗");
   Serial.println("║      🚀 CAN Communication Started 🚀          ║");
