@@ -145,11 +145,112 @@ typedef struct {
 	float ppm;
 } can_status_msg_6;
 
+typedef struct {
+	int id;
+	uint32_t rx_time;
+	float adc_voltages[4];
+} io_board_adc_values;
+
+typedef struct {
+	int id;
+	uint32_t rx_time;
+	uint64_t inputs;
+} io_board_digial_inputs;
+
+typedef struct {
+	int id;
+	uint32_t rx_time;
+	float v_in;
+	float v_out;
+	float temp;
+	bool is_out_on;
+	bool is_pch_on;
+	bool is_dsc_on;
+} psw_status;
+
 // HW types
 typedef enum {
 	HW_TYPE_VESC = 0,
 	HW_TYPE_VESC_BMS,
 	HW_TYPE_CUSTOM_MODULE
 } HW_TYPE;
+
+// CAN baudrate
+typedef enum {
+	CAN_BAUD_125K = 0,
+	CAN_BAUD_250K,
+	CAN_BAUD_500K,
+	CAN_BAUD_1M,
+	CAN_BAUD_10K,
+	CAN_BAUD_20K,
+	CAN_BAUD_50K,
+	CAN_BAUD_75K,
+	CAN_BAUD_100K,
+	CAN_BAUD_INVALID,
+} CAN_BAUD;
+
+// Communication commands
+typedef enum {
+	COMM_FW_VERSION							= 0,
+	COMM_JUMP_TO_BOOTLOADER					= 1,
+	COMM_ERASE_NEW_APP						= 2,
+	COMM_WRITE_NEW_APP_DATA					= 3,
+	COMM_GET_VALUES							= 4,
+	COMM_SET_DUTY							= 5,
+	COMM_SET_CURRENT						= 6,
+	COMM_SET_CURRENT_BRAKE					= 7,
+	COMM_SET_RPM							= 8,
+	COMM_SET_POS							= 9,
+	COMM_SET_HANDBRAKE						= 10,
+	COMM_SET_DETECT							= 11,
+	COMM_SET_SERVO_POS						= 12,
+	COMM_GET_VALUES_SELECTIVE				= 50,
+	COMM_ERASE_BOOTLOADER					= 73,
+	COMM_WRITE_NEW_APP_DATA_LZO				= 81,
+	COMM_SET_CURRENT_REL					= 84,
+	
+	// Custom configuration for hardware
+	COMM_GET_CUSTOM_CONFIG_XML				= 92,
+	COMM_GET_CUSTOM_CONFIG					= 93,
+	COMM_GET_CUSTOM_CONFIG_DEFAULT			= 94,
+	COMM_SET_CUSTOM_CONFIG					= 95,
+	
+	// BMS commands
+	COMM_BMS_GET_VALUES						= 96,
+	
+	// Power switch commands
+	COMM_PSW_GET_STATUS						= 111,
+	COMM_PSW_SWITCH							= 112,
+	
+	// IO Board
+	COMM_IO_BOARD_GET_ALL					= 122,
+	COMM_IO_BOARD_SET_PWM					= 123,
+	COMM_IO_BOARD_SET_DIGITAL				= 124,
+} COMM_PACKET_ID;
+
+// Packet settings
+#define PACKET_MAX_PL_LEN		512
+
+// Firmware version
+#define FW_VERSION_MAJOR		6
+#define FW_VERSION_MINOR		05
+#define FW_TEST_VERSION_NUMBER	0
+
+// Hardware name
+#define HW_NAME					"Super VESC Display"
+
+// CAN configuration
+#define CONF_CONTROLLER_ID		2
+#define CONF_CAN_BAUD_RATE		CAN_BAUD_250K
+
+// Main configuration structure (simplified for display)
+typedef struct {
+    int16_t controller_id;
+    uint8_t can_baud_rate;
+    int16_t can_status_rate_hz;
+} main_config_t;
+
+// Config signature constant (must match VESC Tool expectations)
+#define MAIN_CONFIG_T_SIGNATURE 1954583966
 
 #endif /* DATATYPES_H_ */

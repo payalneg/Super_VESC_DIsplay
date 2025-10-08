@@ -157,6 +157,125 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len) {
 			comm_can_send_buffer(255, send_buffer, ind, 1);
 		} break;
 		
+		case COMM_GET_CUSTOM_CONFIG_XML:
+			Serial.println("(GET_CUSTOM_CONFIG_XML) - Not implemented");
+			// Send empty response
+			{
+				uint8_t send_buffer[2];
+				send_buffer[0] = COMM_GET_CUSTOM_CONFIG_XML;
+				send_buffer[1] = 0; // No custom config XML
+				comm_can_send_buffer(255, send_buffer, 2, 1);
+			}
+			break;
+			
+    case COMM_GET_CUSTOM_CONFIG:
+        Serial.println("(GET_CUSTOM_CONFIG) - Sending config");
+        {
+            uint8_t send_buffer[80];
+            int32_t ind = 0;
+
+            // Parse config index from request
+            int conf_ind = 0;
+            if (len >= 2) {
+                conf_ind = data[1];
+            }
+
+            // Only support config index 0
+            if (conf_ind != 0) {
+                Serial.println("   ↳ Config index != 0, ignoring");
+                break;
+            }
+
+            // Build response
+            send_buffer[ind++] = COMM_GET_CUSTOM_CONFIG;
+            send_buffer[ind++] = conf_ind;
+
+            // Serialize config according to vesc_express format
+            // Signature (uint32_t)
+            buffer_append_uint32(send_buffer, MAIN_CONFIG_T_SIGNATURE, &ind);
+
+            // controller_id (int16_t)
+            buffer_append_int16(send_buffer, (int16_t)CONF_CONTROLLER_ID, &ind);
+
+            // can_baud_rate (uint8_t - 1 byte)
+            send_buffer[ind++] = (uint8_t)CONF_CAN_BAUD_RATE;
+
+            // can_status_rate_hz (int16_t)
+            buffer_append_int16(send_buffer, (int16_t)20, &ind);
+
+            comm_can_send_buffer(255, send_buffer, ind, 1);
+            Serial.printf("✅ Custom config sent: %d bytes (signature + %d fields)\n", ind, 3);
+        }
+        break;
+			
+		case COMM_GET_CUSTOM_CONFIG_DEFAULT:
+			Serial.println("(GET_CUSTOM_CONFIG_DEFAULT) - Sending default config");
+			{
+				uint8_t send_buffer[80];
+				int32_t ind = 0;
+				
+				// Parse config index from request
+				int conf_ind = 0;
+				if (len >= 2) {
+					conf_ind = data[1];
+				}
+				
+				// Only support config index 0
+				if (conf_ind != 0) {
+					Serial.println("   ↳ Config index != 0, ignoring");
+					break;
+				}
+				
+				// Build response
+				send_buffer[ind++] = COMM_GET_CUSTOM_CONFIG_DEFAULT;
+				send_buffer[ind++] = conf_ind;
+				
+				// Serialize default config according to vesc_express format
+				// Signature (uint32_t)
+				buffer_append_uint32(send_buffer, MAIN_CONFIG_T_SIGNATURE, &ind);
+				
+				// controller_id (int16_t)
+				buffer_append_int16(send_buffer, (int16_t)CONF_CONTROLLER_ID, &ind);
+				
+				// can_baud_rate (uint8_t - 1 byte)
+				send_buffer[ind++] = (uint8_t)CONF_CAN_BAUD_RATE;
+				
+				// can_status_rate_hz (int16_t)
+				buffer_append_int16(send_buffer, (int16_t)20, &ind);
+				
+				comm_can_send_buffer(255, send_buffer, ind, 1);
+				Serial.printf("✅ Default custom config sent: %d bytes (signature + %d fields)\n", ind, 3);
+			}
+			break;
+			
+		case COMM_SET_CUSTOM_CONFIG:
+			Serial.println("(SET_CUSTOM_CONFIG) - Ignored");
+			break;
+			
+		case COMM_BMS_GET_VALUES:
+			Serial.println("(BMS_GET_VALUES) - Not a BMS");
+			break;
+			
+		case COMM_PSW_GET_STATUS:
+			Serial.println("(PSW_GET_STATUS) - Not a power switch");
+			break;
+			
+		case COMM_PSW_SWITCH:
+			Serial.println("(PSW_SWITCH) - Not a power switch");
+			break;
+			
+		case COMM_IO_BOARD_GET_ALL:
+			Serial.println("(IO_BOARD_GET_ALL) - Not an IO board");
+			break;
+			
+		case COMM_IO_BOARD_SET_PWM:
+			Serial.println("(IO_BOARD_SET_PWM) - Not an IO board");
+			break;
+			
+		case COMM_IO_BOARD_SET_DIGITAL:
+			Serial.println("(IO_BOARD_SET_DIGITAL) - Not an IO board");
+			break;
+		
 		default:
 			Serial.printf("(Unknown command 0x%02X)\n", cmd);
 			break;
