@@ -5,3 +5,5 @@
 .vscode/ipch
 
 Super_VESC_Display/lvgl-simulator/
+
+vesc_express-main/

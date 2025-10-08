@@ -46,7 +46,7 @@ void DriverTask(void *parameter) {
   Serial.println("📋 All VESC commands will be processed and responded\n");
   
   while(1){
-    // BLE_Loop();       // Process BLE communication (disabled for now)
+    BLE_Loop();       // Process BLE communication (disabled for now)
     
     vTaskDelay(pdMS_TO_TICKS(100));  // Update every 100ms
   }
@@ -111,7 +111,7 @@ void setup()
   Serial.println("\n⏳ Waiting for CAN messages...\n");
   
   // Initialize BLE Server (disabled for now - focusing on CAN only)
-  // BLE_Init();
+  BLE_Init();
   
   // Initialize LVGL with dashboard
   Lvgl_Init();

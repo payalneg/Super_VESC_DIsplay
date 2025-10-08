@@ -9,20 +9,54 @@
 #include "comm_can.h"
 #include "buffer.h"
 #include "datatypes.h"
+#include "confparser.h"
 #include <Arduino.h>
 #include <string.h>
 #include <esp_mac.h>
+#include <Preferences.h>
 
 // Statistics
 static uint32_t command_count = 0;
 
+// Current configuration
+static main_config_t current_config;
+static Preferences preferences;
+
 void vesc_handler_init(void) {
 	command_count = 0;
+	
+	// Initialize preferences
+	preferences.begin("vesc_config", false);
+	
+	// Try to load config from NVS
+	size_t config_size = preferences.getBytesLength("main_config");
+	if (config_size == sizeof(main_config_t)) {
+		preferences.getBytes("main_config", &current_config, sizeof(main_config_t));
+		Serial.printf("✅ Config loaded from NVS: ID=%d, Baud=%d, Rate=%d Hz\n",
+		             current_config.controller_id, 
+		             current_config.can_baud_rate,
+		             current_config.can_status_rate_hz);
+	} else {
+		// Set defaults if no config found
+		confparser_set_defaults_main_config_t(&current_config);
+		Serial.println("✅ Config set to defaults (no saved config)");
+	}
+	
 	Serial.println("✅ VESC Handler initialized");
+}
+
+// Helper function to save config to NVS
+static void save_config_to_nvs(void) {
+	preferences.putBytes("main_config", &current_config, sizeof(main_config_t));
+	Serial.println("💾 Config saved to NVS");
 }
 
 uint32_t vesc_handler_get_command_count(void) {
 	return command_count;
+}
+
+const main_config_t* vesc_handler_get_config(void) {
+	return &current_config;
 }
 
 void vesc_handler_process_command(unsigned char *data, unsigned int len) {
@@ -190,21 +224,12 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len) {
             send_buffer[ind++] = COMM_GET_CUSTOM_CONFIG;
             send_buffer[ind++] = conf_ind;
 
-            // Serialize config according to vesc_express format
-            // Signature (uint32_t)
-            buffer_append_uint32(send_buffer, MAIN_CONFIG_T_SIGNATURE, &ind);
-
-            // controller_id (int16_t)
-            buffer_append_int16(send_buffer, (int16_t)CONF_CONTROLLER_ID, &ind);
-
-            // can_baud_rate (uint8_t - 1 byte)
-            send_buffer[ind++] = (uint8_t)CONF_CAN_BAUD_RATE;
-
-            // can_status_rate_hz (int16_t)
-            buffer_append_int16(send_buffer, (int16_t)20, &ind);
+            // Serialize current config
+            int32_t serialized_len = confparser_serialize_main_config_t(send_buffer + ind, &current_config);
+            ind += serialized_len;
 
             comm_can_send_buffer(255, send_buffer, ind, 1);
-            Serial.printf("✅ Custom config sent: %d bytes (signature + %d fields)\n", ind, 3);
+            Serial.printf("✅ Custom config sent: %d bytes total\n", ind);
         }
         break;
 			
@@ -230,26 +255,66 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len) {
 				send_buffer[ind++] = COMM_GET_CUSTOM_CONFIG_DEFAULT;
 				send_buffer[ind++] = conf_ind;
 				
-				// Serialize default config according to vesc_express format
-				// Signature (uint32_t)
-				buffer_append_uint32(send_buffer, MAIN_CONFIG_T_SIGNATURE, &ind);
+				// Create default config and serialize it
+				main_config_t default_config;
+				confparser_set_defaults_main_config_t(&default_config);
 				
-				// controller_id (int16_t)
-				buffer_append_int16(send_buffer, (int16_t)CONF_CONTROLLER_ID, &ind);
-				
-				// can_baud_rate (uint8_t - 1 byte)
-				send_buffer[ind++] = (uint8_t)CONF_CAN_BAUD_RATE;
-				
-				// can_status_rate_hz (int16_t)
-				buffer_append_int16(send_buffer, (int16_t)20, &ind);
+				int32_t serialized_len = confparser_serialize_main_config_t(send_buffer + ind, &default_config);
+				ind += serialized_len;
 				
 				comm_can_send_buffer(255, send_buffer, ind, 1);
-				Serial.printf("✅ Default custom config sent: %d bytes (signature + %d fields)\n", ind, 3);
+				Serial.printf("✅ Default custom config sent: %d bytes total\n", ind);
 			}
 			break;
 			
 		case COMM_SET_CUSTOM_CONFIG:
-			Serial.println("(SET_CUSTOM_CONFIG) - Ignored");
+			Serial.println("(SET_CUSTOM_CONFIG) - Setting new config");
+			{
+				// Parse config index from request
+				int conf_ind = 0;
+				if (len >= 2) {
+					conf_ind = data[1];
+				}
+				
+				// Only support config index 0
+				if (conf_ind != 0) {
+					Serial.println("   ↳ Config index != 0, ignoring");
+					break;
+				}
+				
+				// Create temporary config to deserialize into
+				main_config_t new_config;
+				
+				// Deserialize config from data (skip first byte which is conf_ind)
+				if (confparser_deserialize_main_config_t(data + 2, &new_config)) {
+					// Check if CAN baud rate changed
+					bool baud_changed = current_config.can_baud_rate != new_config.can_baud_rate;
+					
+					// Update current config
+					current_config = new_config;
+					
+					// Save to NVS
+					save_config_to_nvs();
+					
+					// Send acknowledgement
+					uint8_t send_buffer[50];
+					int32_t ind = 0;
+					send_buffer[ind++] = COMM_SET_CUSTOM_CONFIG;
+					comm_can_send_buffer(255, send_buffer, ind, 1);
+					
+					Serial.println("✅ Config updated successfully!");
+					Serial.printf("   ID=%d, Baud=%d, Rate=%d Hz\n",
+					             current_config.controller_id,
+					             current_config.can_baud_rate,
+					             current_config.can_status_rate_hz);
+					
+					if (baud_changed) {
+						Serial.println("⚠️ CAN baud rate changed! Restart required for changes to take effect.");
+					}
+				} else {
+					Serial.println("❌ Failed to deserialize config!");
+				}
+			}
 			break;
 			
 		case COMM_BMS_GET_VALUES:
