@@ -1,4 +1,5 @@
 #include "ble_vesc_driver.h"
+#include "comm_can.h"
 
 // BLE Configuration variables
 int MTU_SIZE = 128;
@@ -58,7 +59,7 @@ void MyCallbacks::onWrite(BLECharacteristic *pCharacteristic)
       Serial.println();
       
       // Queue command for processing in main loop (non-blocking)
-      uint8_t target_vesc_id = VESC_CAN_ID; // Use configured VESC CAN ID
+      uint8_t target_vesc_id = 255; // Send to all VESCs
       uint8_t send_type = 0; // 0 = process and send response back
       
       // Queue the received data for processing in main loop
@@ -116,8 +117,22 @@ bool BLE_Init() {
       return false;
     }
     
-    // Set up CAN bridge callback to forward VESC messages to BLE
-    VESC_SDK_SetCANBridgeCallback(BLE_SendRawCANMessage);
+    // Set up packet handler to forward CAN packets to BLE
+    comm_can_set_packet_handler([](unsigned char *data, unsigned int len) {
+      if (deviceConnected && pCharacteristicVescTx) {
+        // Forward the packet to BLE
+        size_t offset = 0;
+        while (offset < len) {
+          size_t chunk_size = (len - offset) < PACKET_SIZE ? (len - offset) : PACKET_SIZE;
+          pCharacteristicVescTx->setValue(data + offset, chunk_size);
+          pCharacteristicVescTx->notify();
+          offset += chunk_size;
+          if (offset < len) {
+            vTaskDelay(pdMS_TO_TICKS(10));
+          }
+        }
+      }
+    });
     
     return true;
   }
@@ -156,7 +171,7 @@ void BLE_SendVescData(const vesc_sdk_data_t& data) {
   } else {
     // Send CAN STATUS packet format (simulated CAN_PACKET_STATUS)
     ble_can_message_t status_msg;
-    status_msg.can_id = (0x09 << 8) | VESC_CAN_ID; // CAN_PACKET_STATUS + configured VESC ID
+    status_msg.can_id = (0x09 << 8) | 255; // CAN_PACKET_STATUS + VESC ID
     status_msg.data_length = 8;
     
     // Pack STATUS data (RPM, current, duty) - same format as real VESC
@@ -319,7 +334,7 @@ void BLE_ForwardCANToVESC(uint8_t* can_data, uint8_t len) {
     raw_data[2] = can_data[2];
     raw_data[3] = can_data[3];
     
-    VESC_SDK_SendRawCAN(can_id, raw_data, 4);
+    comm_can_transmit_eid(can_id, raw_data, 4);
   } else {
     // Simple format: interpret first byte as command type
     switch (can_data[0]) {
@@ -327,7 +342,7 @@ void BLE_ForwardCANToVESC(uint8_t* can_data, uint8_t len) {
         {
           float duty = (float)value / 100000.0f; // VESC duty scaling
           Serial.printf("🎯 BLE->CAN: Setting duty %.3f\n", duty);
-          VESC_SDK_SetDuty(duty);
+          comm_can_set_duty(255, duty);
         }
         break;
         
@@ -335,7 +350,7 @@ void BLE_ForwardCANToVESC(uint8_t* can_data, uint8_t len) {
         {
           float current = (float)value / 1000.0f; // VESC current scaling
           Serial.printf("🎯 BLE->CAN: Setting current %.2fA\n", current);
-          VESC_SDK_SetCurrent(current);
+          comm_can_set_current(255, current);
         }
         break;
         
@@ -343,7 +358,7 @@ void BLE_ForwardCANToVESC(uint8_t* can_data, uint8_t len) {
         {
           float current = (float)value / 1000.0f;
           Serial.printf("🎯 BLE->CAN: Setting brake current %.2fA\n", current);
-          VESC_SDK_SetBrakeCurrent(current);
+          comm_can_set_current_brake(255, current);
         }
         break;
         
@@ -351,18 +366,21 @@ void BLE_ForwardCANToVESC(uint8_t* can_data, uint8_t len) {
         {
           float rpm = (float)value;
           Serial.printf("🎯 BLE->CAN: Setting RPM %.0f\n", rpm);
-          VESC_SDK_SetRPM(rpm);
+          comm_can_set_rpm(255, rpm);
         }
         break;
         
       case 0x11: // Ping (CAN_PACKET_PING)
         Serial.println("🎯 BLE->CAN: Sending ping");
-        VESC_SDK_Ping();
+        {
+          HW_TYPE hw_type;
+          comm_can_ping(255, &hw_type);
+        }
         break;
         
       case 0xFF: // Request status (custom command)
         Serial.println("🎯 BLE->CAN: Requesting VESC status");
-        VESC_SDK_RequestStatus();
+        // Status is received automatically from VESC STATUS packets
         break;
         
       default:
@@ -385,7 +403,7 @@ void BLE_ProcessReceivedData() {
       if (first_byte <= 0x50) {
         //Serial.printf("📥 BLE: Processing as VESC command (0x%02X)\n", first_byte);
         
-        uint8_t target_vesc_id = VESC_CAN_ID; // Use configured VESC CAN ID
+        uint8_t target_vesc_id = 255; // Send to any VESC
         uint8_t send_type = 0; // 0 = process and send response back
         
         // Queue using proper VESC fragmentation protocol
@@ -417,26 +435,26 @@ void BLE_ProcessReceivedData() {
       if (command.startsWith("DUTY:")) {
         float duty = command.substring(5).toFloat();
         Serial.printf("🎯 BLE: Text command - Setting duty %.3f\n", duty);
-        VESC_SDK_SetDuty(duty);
+        comm_can_set_duty(255, duty);
       } else if (command.startsWith("CURR:")) {
         float current = command.substring(5).toFloat();
         Serial.printf("🎯 BLE: Text command - Setting current %.2fA\n", current);
-        VESC_SDK_SetCurrent(current);
+        comm_can_set_current(255, current);
       } else if (command.startsWith("RPM:")) {
         float rpm = command.substring(4).toFloat();
         Serial.printf("🎯 BLE: Text command - Setting RPM %.0f\n", rpm);
-        VESC_SDK_SetRPM(rpm);
+        comm_can_set_rpm(255, rpm);
       } else if (command == "STATUS") {
         Serial.println("🎯 BLE: Text command - Requesting status");
-        VESC_SDK_RequestStatus();
+        // Status is received automatically from VESC STATUS packets
       } else if (command == "FW_VERSION") {
         Serial.println("🎯 BLE: Text command - Requesting firmware version");
         uint8_t fw_cmd = 0x00; // COMM_FW_VERSION
-        BLE_QueueCommand(&fw_cmd, 1, VESC_CAN_ID, 0);
+        BLE_QueueCommand(&fw_cmd, 1, 255, 0);
       } else if (command == "GET_VALUES") {
         Serial.println("🎯 BLE: Text command - Requesting values");
         uint8_t get_cmd = 0x04; // COMM_GET_VALUES
-        BLE_QueueCommand(&get_cmd, 1, VESC_CAN_ID, 0);
+        BLE_QueueCommand(&get_cmd, 1, 255, 0);
       } else {
         Serial.printf("⚠️  BLE: Unknown text command: %s\n", command.c_str());
       }
@@ -454,12 +472,30 @@ void BLE_Loop() {
   // Process any buffered received data (legacy)
   //BLE_ProcessReceivedData();
   
-  // Send VESC data if connected and VESC is available
-  if (deviceConnected && VESC_SDK_IsConnected()) {
+  // Send VESC data if connected
+  if (deviceConnected) {
     static unsigned long last_ble_update = 0;
     if (millis() - last_ble_update > 1000) { // Send data every second
-      vesc_sdk_data_t data = VESC_SDK_GetData();
-      BLE_SendVescData(data);
+      can_status_msg *status = comm_can_get_status_msg_id(255);
+      if (status && status->id != -1) {
+        // Create a compatible data structure
+        vesc_sdk_data_t data;
+        data.rpm = status->rpm;
+        data.current = status->current;
+        data.duty_cycle = status->duty;
+        
+        can_status_msg_5 *status5 = comm_can_get_status_msg_5_id(255);
+        if (status5) {
+          data.voltage = status5->v_in;
+        }
+        
+        can_status_msg_4 *status4 = comm_can_get_status_msg_4_id(255);
+        if (status4) {
+          data.temp_fet = status4->temp_fet;
+        }
+        
+        BLE_SendVescData(data);
+      }
       last_ble_update = millis();
     }
   }
@@ -528,7 +564,7 @@ void BLE_ProcessCommandQueue() {
     //              cmd.length, cmd.target_vesc_id);
     
     // Send command using VESC fragmentation protocol
-    VESC_SDK_SendCommandBuffer(cmd.target_vesc_id, cmd.data, cmd.length, cmd.send_type);
+    comm_can_send_buffer(cmd.target_vesc_id, cmd.data, cmd.length, cmd.send_type);
     
     //Serial.printf("✅ BLE: Sent queued command (%d bytes) to VESC %d\n", 
     //              cmd.length, cmd.target_vesc_id);

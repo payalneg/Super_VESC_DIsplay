@@ -3,7 +3,17 @@
 
 #include <Arduino.h>
 #include <NimBLEDevice.h>
-#include "VESC_SDK_Driver.h"
+#include "comm_can.h"
+#include "datatypes.h"
+
+// Compatibility structure for BLE
+typedef struct {
+    float rpm;
+    float current;
+    float duty_cycle;
+    float voltage;
+    float temp_fet;
+} vesc_sdk_data_t;
 #include "driver/twai.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
