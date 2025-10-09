@@ -22,6 +22,9 @@ static uint32_t command_count = 0;
 static main_config_t current_config;
 static Preferences preferences;
 
+// Response callback (for BLE or other interfaces)
+static vesc_response_callback_t response_callback = nullptr;
+
 void vesc_handler_init(void) {
 	command_count = 0;
 	
@@ -57,6 +60,11 @@ uint32_t vesc_handler_get_command_count(void) {
 
 const main_config_t* vesc_handler_get_config(void) {
 	return &current_config;
+}
+
+void vesc_handler_set_response_callback(vesc_response_callback_t callback) {
+	response_callback = callback;
+	Serial.printf("✅ VESC Handler: Response callback %s\n", callback ? "enabled" : "disabled");
 }
 
 void vesc_handler_process_command(unsigned char *data, unsigned int len) {
@@ -110,7 +118,12 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len) {
 			uint32_t hw_crc = 0x12345678; // Dummy CRC
 			buffer_append_uint32(send_buffer, hw_crc, &ind);
 			
-			comm_can_send_buffer(255, send_buffer, ind, 1); // Send to broadcast
+			// Send via CAN if no callback set, otherwise send via callback (BLE)
+			if (response_callback) {
+				response_callback(send_buffer, ind);
+			} else {
+				comm_can_send_buffer(255, send_buffer, ind, 1); // Send to broadcast
+			}
 			Serial.printf("✅ FW_VERSION response sent: %s v%d.%02d\n", HW_NAME, FW_VERSION_MAJOR, FW_VERSION_MINOR);
 		} break;
 		
@@ -147,7 +160,17 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len) {
 			buffer_append_float32(send_buffer, 0.0, 1e5, &ind);     // avg_vd
 			buffer_append_float32(send_buffer, 0.0, 1e5, &ind);     // avg_vq
 			
-			comm_can_send_buffer(255, send_buffer, ind, 1);
+			// Send via CAN if no callback set, otherwise send via callback (BLE)
+			if (response_callback) {
+				response_callback(send_buffer, ind);
+			} else {
+				// Send via CAN if no callback set, otherwise send via callback (BLE)
+			if (response_callback) {
+				response_callback(send_buffer, ind);
+			} else {
+				comm_can_send_buffer(255, send_buffer, ind, 1);
+			}
+			}
 			Serial.println("✅ GET_VALUES response sent");
 		} break;
 		
@@ -188,7 +211,12 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len) {
 			send_buffer[ind++] = COMM_GET_VALUES_SELECTIVE;
 			send_buffer[ind++] = 0; // No values yet
 			
-			comm_can_send_buffer(255, send_buffer, ind, 1);
+			// Send via CAN if no callback set, otherwise send via callback (BLE)
+			if (response_callback) {
+				response_callback(send_buffer, ind);
+			} else {
+				comm_can_send_buffer(255, send_buffer, ind, 1);
+			}
 		} break;
 		
 		case COMM_GET_CUSTOM_CONFIG_XML:
@@ -262,7 +290,12 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len) {
 				int32_t serialized_len = confparser_serialize_main_config_t(send_buffer + ind, &default_config);
 				ind += serialized_len;
 				
+				// Send via CAN if no callback set, otherwise send via callback (BLE)
+			if (response_callback) {
+				response_callback(send_buffer, ind);
+			} else {
 				comm_can_send_buffer(255, send_buffer, ind, 1);
+			}
 				Serial.printf("✅ Default custom config sent: %d bytes total\n", ind);
 			}
 			break;
@@ -300,7 +333,12 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len) {
 					uint8_t send_buffer[50];
 					int32_t ind = 0;
 					send_buffer[ind++] = COMM_SET_CUSTOM_CONFIG;
-					comm_can_send_buffer(255, send_buffer, ind, 1);
+					// Send via CAN if no callback set, otherwise send via callback (BLE)
+			if (response_callback) {
+				response_callback(send_buffer, ind);
+			} else {
+				comm_can_send_buffer(255, send_buffer, ind, 1);
+			}
 					
 					Serial.println("✅ Config updated successfully!");
 					Serial.printf("   ID=%d, Baud=%d, Rate=%d Hz\n",

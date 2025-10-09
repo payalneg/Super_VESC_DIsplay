@@ -5,6 +5,7 @@
 #include <NimBLEDevice.h>
 #include "comm_can.h"
 #include "datatypes.h"
+#include "packet_parser.h"
 
 // Compatibility structure for BLE
 typedef struct {
@@ -87,5 +88,8 @@ void BLE_SendVESCResponse(uint32_t can_id, uint8_t* data, uint8_t len);
 bool BLE_InitCommandQueue();
 bool BLE_QueueCommand(uint8_t* data, uint16_t length, uint8_t target_vesc_id, uint8_t send_type);
 void BLE_ProcessCommandQueue();
+
+// Response sending (for vesc_handler callback)
+void BLE_SendFramedResponse(uint8_t* data, unsigned int len);
 
 #endif // BLE_VESC_DRIVER_H

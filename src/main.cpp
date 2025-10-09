@@ -110,8 +110,16 @@ void setup()
   Serial.println("╚════════════════════════════════════════════════╝");
   Serial.println("\n⏳ Waiting for CAN messages...\n");
   
-  // Initialize BLE Server (disabled for now - focusing on CAN only)
-  BLE_Init();
+  // Initialize BLE Server
+  if (BLE_Init()) {
+    Serial.println("✅ BLE initialized successfully");
+    
+    // Register BLE response callback in vesc_handler
+    vesc_handler_set_response_callback(BLE_SendFramedResponse);
+    Serial.println("✅ BLE response callback registered in VESC handler");
+  } else {
+    Serial.println("❌ BLE initialization failed");
+  }
   
   // Initialize LVGL with dashboard
   Lvgl_Init();

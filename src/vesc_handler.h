@@ -14,6 +14,7 @@
 #define VESC_HANDLER_H_
 
 #include <stdint.h>
+#include "confparser.h"  // For main_config_t type
 
 // Initialize VESC handler module
 void vesc_handler_init(void);
@@ -23,5 +24,14 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len);
 
 // Get statistics
 uint32_t vesc_handler_get_command_count(void);
+
+// Get current configuration
+const main_config_t* vesc_handler_get_config(void);
+
+// Callback type for sending responses
+typedef void (*vesc_response_callback_t)(uint8_t *data, unsigned int len);
+
+// Set response callback (for BLE or other interfaces)
+void vesc_handler_set_response_callback(vesc_response_callback_t callback);
 
 #endif /* VESC_HANDLER_H_ */
