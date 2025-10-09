@@ -5,7 +5,7 @@
 #include "vesc_handler.h"
 
 // BLE Configuration variables
-int MTU_SIZE = 128;
+int MTU_SIZE = 23;
 int PACKET_SIZE = MTU_SIZE - 3;
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
@@ -44,9 +44,13 @@ void MyServerCallbacks::onDisconnect(NimBLEServer *pServer)
 
 void MyServerCallbacks::onMTUChange(uint16_t MTU, ble_gap_conn_desc *desc)
 {
-  //Serial.printf("BLE MTU changed - new size %d, peer %s\n", MTU, NimBLEAddress(desc->peer_ota_addr).toString().c_str());
+  Serial.printf("[%lu] 🔵 BLE MTU changed - new size %d, peer %s\n", millis(), MTU, NimBLEAddress(desc->peer_ota_addr).toString().c_str());
+  Serial.printf("[%lu] 🔵 BLE Packet size adjusted to %d bytes\n", millis(), MTU - 3);
   MTU_SIZE = MTU;
   PACKET_SIZE = MTU_SIZE - 3;
+  if (PACKET_SIZE > 120) {
+    PACKET_SIZE = 120;
+  }
 }
 
 #ifdef BLE_MODE_BRIDGE
@@ -57,7 +61,7 @@ static uint8_t expected_response_vesc_id = 255;
 
 // Packet processed callback - called when valid packet is parsed from BLE
 void BLE_OnPacketParsed(uint8_t* data, uint16_t len) {
-  Serial.printf("📦 BLE: Parsed complete packet (%d bytes)\n", len);
+  Serial.printf("[%lu] 📦 BLE: Parsed complete packet (%d bytes)\n", millis(), len);
   
   if (len < 1) {
     return;
@@ -75,7 +79,7 @@ void BLE_OnPacketParsed(uint8_t* data, uint16_t len) {
   //          Parser extracts: data[0]=0x11 (payload), len=1
   //          0x11 = 17 = CAN_PACKET_PING
   
-  Serial.printf("📦 BLE→CAN: Received payload (%d bytes): ", len);
+  Serial.printf("[%lu] 📦 BLE→CAN: Received payload (%d bytes): ", millis(), len);
   for (int i = 0; i < len && i < 16; i++) {
     Serial.printf("%02X ", data[i]);
   }
@@ -92,7 +96,7 @@ void BLE_OnPacketParsed(uint8_t* data, uint16_t len) {
   waiting_for_can_response = true;
   expected_response_vesc_id = target_vesc_id;
   
-  Serial.printf("🔄 BLE→CAN: Forwarding to CAN bus (broadcast to all VESCs)\n");
+  Serial.printf("[%lu] 🔄 BLE→CAN: Forwarding to CAN bus (broadcast to all VESCs)\n", millis());
   
   // send_type = 0: commands_send (wait for response and send it back)
   comm_can_send_buffer(target_vesc_id, data, len, 0);
@@ -133,7 +137,7 @@ void MyCallbacks::onWrite(BLECharacteristic *pCharacteristic)
   {
     if (pCharacteristic->getUUID().equals(pCharacteristicVescRx->getUUID()))
     {
-      Serial.printf("📥 BLE: received %d bytes: ", rxValue.length());
+      Serial.printf("[%lu] 📥 BLE: received %d bytes: ", millis(), rxValue.length());
       for (int i = 0; i < rxValue.length(); i++) {
         Serial.printf("%02X ", (uint8_t)rxValue[i]);
       }
