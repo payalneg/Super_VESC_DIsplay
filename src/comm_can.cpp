@@ -203,6 +203,10 @@ void decode_msg(uint32_t eid, uint8_t *data8, int len) {
 				if (packet_handler) {
 					packet_handler(rx_buffer[buf_ind], rxbuf_len);
 				}
+				else
+				{
+					Serial.printf("no packet handler set\n");
+				}
 			}
 		} break;
 
@@ -224,6 +228,10 @@ void decode_msg(uint32_t eid, uint8_t *data8, int len) {
 			// Process packet if handler is set
 			if (packet_handler) {
 				packet_handler(data8 + ind, len - ind);
+			}
+			else
+			{
+				Serial.printf("no packet handler set\n");
 			}
 		} break;
 

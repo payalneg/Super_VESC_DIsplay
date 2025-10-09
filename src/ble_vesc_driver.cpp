@@ -117,23 +117,6 @@ bool BLE_Init() {
       return false;
     }
     
-    // Set up packet handler to forward CAN packets to BLE
-    comm_can_set_packet_handler([](unsigned char *data, unsigned int len) {
-      if (deviceConnected && pCharacteristicVescTx) {
-        // Forward the packet to BLE
-        size_t offset = 0;
-        while (offset < len) {
-          size_t chunk_size = (len - offset) < PACKET_SIZE ? (len - offset) : PACKET_SIZE;
-          pCharacteristicVescTx->setValue(data + offset, chunk_size);
-          pCharacteristicVescTx->notify();
-          offset += chunk_size;
-          if (offset < len) {
-            vTaskDelay(pdMS_TO_TICKS(10));
-          }
-        }
-      }
-    });
-    
     return true;
   }
   catch (const std::exception& e) {
