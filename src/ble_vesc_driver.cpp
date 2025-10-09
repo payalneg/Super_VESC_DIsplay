@@ -1,4 +1,5 @@
 #include "ble_vesc_driver.h"
+#include "ble_config.h"
 #include "comm_can.h"
 #include "packet_parser.h"
 #include "vesc_handler.h"
@@ -48,31 +49,93 @@ void MyServerCallbacks::onMTUChange(uint16_t MTU, ble_gap_conn_desc *desc)
   PACKET_SIZE = MTU_SIZE - 3;
 }
 
-// Packet processed callback - called when valid packet is parsed
+#ifdef BLE_MODE_BRIDGE
+// Track if we're waiting for a CAN response to forward to BLE (Bridge mode only)
+static bool waiting_for_can_response = false;
+static uint8_t expected_response_vesc_id = 255;
+#endif
+
+// Packet processed callback - called when valid packet is parsed from BLE
 void BLE_OnPacketParsed(uint8_t* data, uint16_t len) {
   Serial.printf("📦 BLE: Parsed complete packet (%d bytes)\n", len);
   
-  // Check if this is addressed to our device (default CAN ID = 2)
-  // In VESC protocol, the first byte can be the target address or the command
-  // If the first byte matches our device ID (2), this is a command for us
-  
-  if (len > 0) {
-    uint8_t first_byte = data[0];
-    
-    // Check if first byte is our device address (02)
-    if (first_byte == CONF_CONTROLLER_ID) {
-      Serial.printf("📍 BLE: Packet addressed to our device (ID=%d)\n", CONF_CONTROLLER_ID);
-      
-      // Skip the address byte and process the rest as a VESC command
-      if (len > 1) {
-        vesc_handler_process_command(data + 1, len - 1);
-      }
-    } else {
-      // Otherwise, treat the whole packet as a VESC command
-      Serial.printf("📍 BLE: Processing as direct VESC command\n");
-      vesc_handler_process_command(data, len);
-    }
+  if (len < 1) {
+    return;
   }
+  
+#ifdef BLE_MODE_BRIDGE
+  // ============================================================================
+  // BLE-CAN Bridge Mode (like vesc_express)
+  // ============================================================================
+  
+  // Extract target VESC ID and command
+  uint8_t target_vesc_id = 255; // Default: broadcast to all VESCs
+  uint8_t* command_data = data;
+  uint16_t command_len = len;
+  
+  // Check if first byte is a VESC ID (0x01-0xFE) or a command (0x00 or high values)
+  uint8_t first_byte = data[0];
+  
+  // If first byte looks like an ID (typical range 1-254), treat it as target ID
+  if (first_byte > 0 && first_byte < 0xFE && first_byte != CONF_CONTROLLER_ID) {
+    // First byte is target VESC ID
+    target_vesc_id = first_byte;
+    command_data = data + 1;
+    command_len = len - 1;
+    Serial.printf("📍 BLE→CAN: Target VESC ID=%d, Command=0x%02X\n", 
+                  target_vesc_id, command_len > 0 ? command_data[0] : 0xFF);
+  } else if (first_byte == CONF_CONTROLLER_ID) {
+    // Addressed to our device - process locally
+    Serial.printf("📍 BLE→Local: Processing command locally (ID=%d)\n", CONF_CONTROLLER_ID);
+    
+    if (len > 1) {
+      vesc_handler_process_command(data + 1, len - 1);
+    }
+    return;
+  } else {
+    // First byte is a command, broadcast to all VESCs
+    Serial.printf("📍 BLE→CAN: Broadcasting command 0x%02X to all VESCs\n", first_byte);
+  }
+  
+  // Forward command to CAN bus via PROCESS_RX_BUFFER / PROCESS_SHORT_BUFFER protocol
+  // send_type = 0: wait for response and send it back
+  if (command_len > 0) {
+    waiting_for_can_response = true;
+    expected_response_vesc_id = target_vesc_id;
+    
+    Serial.printf("🔄 BLE→CAN: Forwarding %d bytes to VESC %d (waiting for response)\n", 
+                  command_len, target_vesc_id);
+    
+    // Use comm_can_send_buffer which handles fragmentation automatically
+    // send_type = 0: commands_send in CAN protocol (wait for response)
+    comm_can_send_buffer(target_vesc_id, command_data, command_len, 0);
+  }
+  
+#endif // BLE_MODE_BRIDGE
+
+#ifdef BLE_MODE_DIRECT
+  // ============================================================================
+  // Direct Processing Mode (standalone device)
+  // ============================================================================
+  
+  // Check if this is addressed to our device (default CAN ID = 2)
+  uint8_t first_byte = data[0];
+  
+  // Check if first byte is our device address (02)
+  if (first_byte == CONF_CONTROLLER_ID) {
+    Serial.printf("📍 BLE→Local: Packet addressed to device (ID=%d)\n", CONF_CONTROLLER_ID);
+    
+    // Skip the address byte and process the rest as a VESC command
+    if (len > 1) {
+      vesc_handler_process_command(data + 1, len - 1);
+    }
+  } else {
+    // Otherwise, treat the whole packet as a VESC command
+    Serial.printf("📍 BLE→Local: Processing as direct VESC command\n");
+    vesc_handler_process_command(data, len);
+  }
+  
+#endif // BLE_MODE_DIRECT
 }
 
 // BLE Characteristic Callbacks Implementation
@@ -590,7 +653,7 @@ void BLE_ProcessCommandQueue() {
   }
 }
 
-// Send framed response via BLE (callback for vesc_handler)
+// Send framed response via BLE (callback for vesc_handler - local commands)
 void BLE_SendFramedResponse(uint8_t* data, unsigned int len) {
   if (!deviceConnected || !pCharacteristicVescTx) {
     Serial.println("⚠️  BLE: Cannot send response - not connected");
@@ -611,7 +674,7 @@ void BLE_SendFramedResponse(uint8_t* data, unsigned int len) {
     pCharacteristicVescTx->setValue(framed_buffer, framed_len);
     pCharacteristicVescTx->notify();
     
-    Serial.printf("📤 BLE: Sent framed response (%d bytes total, %d payload): ", framed_len, len);
+    Serial.printf("📤 BLE←Local: Sent framed response (%d bytes total, %d payload): ", framed_len, len);
     for (int i = 0; i < framed_len && i < 20; i++) {
       Serial.printf("%02X ", framed_buffer[i]);
     }
@@ -619,7 +682,7 @@ void BLE_SendFramedResponse(uint8_t* data, unsigned int len) {
     Serial.println();
   } else {
     // Need to fragment the response
-    Serial.printf("⚠️  BLE: Response too large (%d > %d), fragmenting...\n", framed_len, PACKET_SIZE);
+    Serial.printf("⚠️  BLE←Local: Response too large (%d > %d), fragmenting...\n", framed_len, PACKET_SIZE);
     
     int offset = 0;
     while (offset < framed_len) {
@@ -628,7 +691,7 @@ void BLE_SendFramedResponse(uint8_t* data, unsigned int len) {
       pCharacteristicVescTx->setValue(framed_buffer + offset, chunk_size);
       pCharacteristicVescTx->notify();
       
-      Serial.printf("📤 BLE: Sent fragment %d bytes (offset %d)\n", chunk_size, offset);
+      Serial.printf("📤 BLE←Local: Sent fragment %d bytes (offset %d)\n", chunk_size, offset);
       offset += chunk_size;
       
       // Small delay between fragments
@@ -636,3 +699,57 @@ void BLE_SendFramedResponse(uint8_t* data, unsigned int len) {
     }
   }
 }
+
+#ifdef BLE_MODE_BRIDGE
+// CAN response handler - called when CAN response is received (Bridge mode only)
+void BLE_OnCANResponse(uint8_t* data, unsigned int len) {
+  // Only forward if we're waiting for a response and BLE is connected
+  if (!waiting_for_can_response || !deviceConnected || !pCharacteristicVescTx) {
+    return;
+  }
+  
+  Serial.printf("📦 CAN→BLE: Received CAN response (%d bytes), forwarding to BLE\n", len);
+  
+  // Forward the response to BLE with framing
+  waiting_for_can_response = false; // Reset flag
+  
+  // Build framed packet
+  uint8_t framed_buffer[600];
+  uint16_t framed_len = packet_build_frame(data, len, framed_buffer, sizeof(framed_buffer));
+  
+  if (framed_len == 0) {
+    Serial.println("❌ BLE←CAN: Failed to build framed packet");
+    return;
+  }
+  
+  // Send via BLE
+  if (framed_len <= PACKET_SIZE) {
+    pCharacteristicVescTx->setValue(framed_buffer, framed_len);
+    pCharacteristicVescTx->notify();
+    
+    Serial.printf("📤 BLE←CAN: Sent framed response (%d bytes total, %d payload): ", framed_len, len);
+    for (int i = 0; i < framed_len && i < 20; i++) {
+      Serial.printf("%02X ", framed_buffer[i]);
+    }
+    if (framed_len > 20) Serial.printf("... (%d more)", framed_len - 20);
+    Serial.println();
+  } else {
+    // Need to fragment the response
+    Serial.printf("⚠️  BLE←CAN: Response too large (%d > %d), fragmenting...\n", framed_len, PACKET_SIZE);
+    
+    int offset = 0;
+    while (offset < framed_len) {
+      int chunk_size = (framed_len - offset > PACKET_SIZE) ? PACKET_SIZE : (framed_len - offset);
+      
+      pCharacteristicVescTx->setValue(framed_buffer + offset, chunk_size);
+      pCharacteristicVescTx->notify();
+      
+      Serial.printf("📤 BLE←CAN: Sent fragment %d bytes (offset %d)\n", chunk_size, offset);
+      offset += chunk_size;
+      
+      // Small delay between fragments
+      delay(10);
+    }
+  }
+}
+#endif // BLE_MODE_BRIDGE

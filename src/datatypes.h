@@ -23,6 +23,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "ble_config.h"
 
 // CAN commands
 typedef enum {
@@ -240,8 +241,14 @@ typedef enum {
 #define HW_NAME					"Super VESC Display"
 
 // CAN configuration
+#ifdef BLE_MODE_BRIDGE
+#define CONF_CONTROLLER_ID		255
+#else
 #define CONF_CONTROLLER_ID		2
+#endif
+
 #define CONF_CAN_BAUD_RATE		CAN_BAUD_250K
+
 
 // Main configuration structure (simplified for display)
 typedef struct {

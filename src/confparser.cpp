@@ -6,6 +6,7 @@
 #include "datatypes.h"
 #include <Arduino.h>
 
+
 int32_t confparser_serialize_main_config_t(uint8_t *buffer, const main_config_t *conf) {
     int32_t ind = 0;
 

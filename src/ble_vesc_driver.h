@@ -6,6 +6,7 @@
 #include "comm_can.h"
 #include "datatypes.h"
 #include "packet_parser.h"
+#include "ble_config.h"
 
 // Compatibility structure for BLE
 typedef struct {
@@ -91,5 +92,10 @@ void BLE_ProcessCommandQueue();
 
 // Response sending (for vesc_handler callback)
 void BLE_SendFramedResponse(uint8_t* data, unsigned int len);
+
+#ifdef BLE_MODE_BRIDGE
+// CAN response handler (for BLE-CAN bridge mode only)
+void BLE_OnCANResponse(uint8_t* data, unsigned int len);
+#endif
 
 #endif // BLE_VESC_DRIVER_H

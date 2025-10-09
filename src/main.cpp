@@ -34,6 +34,7 @@
 #include "LVGL_Driver.h"
 #include "Touch_GT911.h"
 #include "I2C_Driver.h"
+#include "ble_config.h"              // BLE mode configuration
 #include "comm_can.h"                // VESC CAN implementation from vesc_express
 #include "ble_vesc_driver.h"         // BLE VESC Bridge
 #include "buffer.h"                  // Buffer utility functions
@@ -41,12 +42,13 @@
 #include "vesc_handler.h"            // VESC command handler
 
 void DriverTask(void *parameter) {
-  Serial.println("\n🚀 DriverTask started - VESC Handler enabled");
-  Serial.printf("📡 Listening on CAN: TX=GPIO6, RX=GPIO0, Speed=250kbps, Device ID=%d\n", CONF_CONTROLLER_ID);
-  Serial.println("📋 All VESC commands will be processed and responded\n");
+  Serial.println("\n🚀 DriverTask started");
+  Serial.printf("🔧 BLE Mode: %s\n", BLE_MODE_NAME);
+  Serial.printf("📋 Description: %s\n", BLE_MODE_DESC);
+  Serial.printf("📡 CAN Bus: TX=GPIO6, RX=GPIO0, Speed=250kbps, Device ID=%d\n\n", CONF_CONTROLLER_ID);
   
   while(1){
-    BLE_Loop();       // Process BLE communication (disabled for now)
+    BLE_Loop();       // Process BLE communication
     
     vTaskDelay(pdMS_TO_TICKS(100));  // Update every 100ms
   }
@@ -90,8 +92,23 @@ void setup()
   uint8_t vesc_can_id = CONF_CONTROLLER_ID;
   comm_can_start(GPIO_NUM_6, GPIO_NUM_0, vesc_can_id);
   
-  // Set VESC command handler callback
+#ifdef BLE_MODE_BRIDGE
+  // ============================================================================
+  // BLE-CAN Bridge Mode: Forward CAN responses to BLE
+  // ============================================================================
+  auto packet_handler_wrapper = [](unsigned char *data, unsigned int len) {
+    // Forward CAN responses to BLE
+    BLE_OnCANResponse(data, len);
+  };
+  comm_can_set_packet_handler(packet_handler_wrapper);
+  
+#else // BLE_MODE_DIRECT
+  // ============================================================================
+  // Direct Mode: Process CAN messages locally
+  // ============================================================================
   comm_can_set_packet_handler(vesc_handler_process_command);
+  
+#endif
   
   Serial.println("\n╔════════════════════════════════════════════════╗");
   Serial.println("║      🚀 CAN Communication Started 🚀          ║");
@@ -104,11 +121,19 @@ void setup()
   Serial.printf("║ TX Pin:             GPIO 6                    ║\n");
   Serial.printf("║ RX Pin:             GPIO 0                    ║\n");
   Serial.println("╠════════════════════════════════════════════════╣");
-  Serial.println("║ 📋 VESC Commands:   ENABLED                   ║");
-  Serial.println("║ 📊 PING/PONG:       ENABLED                   ║");
-  Serial.println("║ 🔍 Auto-Response:   ENABLED                   ║");
+#ifdef BLE_MODE_BRIDGE
+  Serial.println("║ 🌉 BLE Mode:        BRIDGE (vesc_express)     ║");
+  Serial.println("║ 📱 BLE Device:      SuperVESCDisplay          ║");
+  Serial.println("║ 📋 Local Commands:  ENABLED (ID=2)            ║");
+  Serial.println("║ 🔄 CAN Forwarding:  ENABLED (all other IDs)   ║");
+#else
+  Serial.println("║ 🌉 BLE Mode:        DIRECT (standalone)       ║");
+  Serial.println("║ 📱 BLE Device:      SuperVESCDisplay          ║");
+  Serial.println("║ 📋 Local Commands:  ALL commands processed    ║");
+  Serial.println("║ 🔄 CAN Forwarding:  DISABLED                  ║");
+#endif
   Serial.println("╚════════════════════════════════════════════════╝");
-  Serial.println("\n⏳ Waiting for CAN messages...\n");
+  Serial.println("\n⏳ Waiting for BLE/CAN messages...\n");
   
   // Initialize BLE Server
   if (BLE_Init()) {
