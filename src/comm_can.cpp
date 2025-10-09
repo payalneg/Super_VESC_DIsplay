@@ -92,8 +92,8 @@ void decode_msg(uint32_t eid, uint8_t *data8, int len) {
 	// Log all incoming CAN packets with their type
 	static uint32_t packet_count = 0;
 	if (packet_count++ % 100 == 0 || cmd == CAN_PACKET_PING || cmd == CAN_PACKET_PONG) {
-		Serial.printf("🔍 CAN RX: ID=0x%03X (VESC:%d, CMD:0x%02X) Len=%d\n", 
-		             eid, id, cmd, len);
+		Serial.printf("[%lu] 🔍 CAN RX: ID=0x%03X (VESC:%d, CMD:0x%02X) Len=%d\n", 
+		             millis(), eid, id, cmd, len);
 	}
 
 	// Handle messages addressed to us
@@ -205,7 +205,7 @@ void decode_msg(uint32_t eid, uint8_t *data8, int len) {
 				}
 				else
 				{
-					Serial.printf("no packet handler set\n");
+					Serial.printf("[%lu] no packet handler set\n", millis());
 				}
 			}
 		} break;
@@ -231,24 +231,24 @@ void decode_msg(uint32_t eid, uint8_t *data8, int len) {
 			}
 			else
 			{
-				Serial.printf("no packet handler set\n");
+				Serial.printf("[%lu] no packet handler set\n", millis());
 			}
 		} break;
 
 		case CAN_PACKET_PING: {
-			Serial.printf("📥 CAN PING received from ID %d\n", data8[0]);
+			Serial.printf("[%lu] 📥 CAN PING received from ID %d\n", millis(), data8[0]);
 			uint8_t buffer[2];
 			buffer[0] = can_config.controller_id;
 			buffer[1] = HW_TYPE_CUSTOM_MODULE;
 			uint32_t pong_id = data8[0] | ((uint32_t)CAN_PACKET_PONG << 8);
-			Serial.printf("📤 Sending PONG: ID=0x%03X, MyID=%d, HW_TYPE=%d\n", 
-			             pong_id, buffer[0], buffer[1]);
+			Serial.printf("[%lu] 📤 Sending PONG: ID=0x%03X, MyID=%d, HW_TYPE=%d\n", 
+			             millis(), pong_id, buffer[0], buffer[1]);
 			comm_can_transmit_eid(pong_id, buffer, 2);
 		} break;
 
 		case CAN_PACKET_PONG:
-			Serial.printf("📥 CAN PONG received: ID=%d, HW_TYPE=%d\n", 
-			             data8[0], len >= 2 ? data8[1] : -1);
+			Serial.printf("[%lu] 📥 CAN PONG received: ID=%d, HW_TYPE=%d\n", 
+			             millis(), data8[0], len >= 2 ? data8[1] : -1);
 			xSemaphoreGive(ping_sem);
 			if (len >= 2) {
 				ping_hw_last = (HW_TYPE)data8[1];
@@ -278,8 +278,8 @@ void decode_msg(uint32_t eid, uint8_t *data8, int len) {
 				// Log first STATUS packet from new VESC
 				static int8_t last_status_id = -1;
 				if (last_status_id != id) {
-					Serial.printf("📊 STATUS packet from VESC #%d: RPM=%.0f, Current=%.2fA\n", 
-					             id, stat_tmp->rpm, stat_tmp->current);
+					Serial.printf("[%lu] 📊 STATUS packet from VESC #%d: RPM=%.0f, Current=%.2fA\n", 
+					             millis(), id, stat_tmp->rpm, stat_tmp->current);
 					last_status_id = id;
 				}
 				break;
@@ -464,8 +464,8 @@ void comm_can_start(int pin_tx, int pin_rx, uint8_t controller_id) {
 
 	init_done = true;
 
-	Serial.printf("CAN initialized: TX=%d, RX=%d, ID=%d, Speed=250kbps\n", 
-				  pin_tx, pin_rx, controller_id);
+	Serial.printf("[%lu] CAN initialized: TX=%d, RX=%d, ID=%d, Speed=250kbps\n", 
+				  millis(), pin_tx, pin_rx, controller_id);
 }
 
 void comm_can_stop(void) {

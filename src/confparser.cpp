@@ -31,8 +31,8 @@ bool confparser_deserialize_main_config_t(const uint8_t *buffer, main_config_t *
     // Check signature
     uint32_t signature = buffer_get_uint32(buffer, &ind);
     if (signature != MAIN_CONFIG_T_SIGNATURE) {
-        Serial.printf("⚠️ Config signature mismatch: got 0x%08X, expected 0x%08X\n", 
-                     signature, MAIN_CONFIG_T_SIGNATURE);
+        Serial.printf("[%lu] ⚠️ Config signature mismatch: got 0x%08X, expected 0x%08X\n", 
+                     millis(), signature, MAIN_CONFIG_T_SIGNATURE);
         return false;
     }
 
@@ -45,8 +45,8 @@ bool confparser_deserialize_main_config_t(const uint8_t *buffer, main_config_t *
     // can_status_rate_hz (int16_t)
     conf->can_status_rate_hz = buffer_get_int16(buffer, &ind);
 
-    Serial.printf("📥 Deserialized config: ID=%d, Baud=%d, Rate=%d Hz\n",
-                 conf->controller_id, conf->can_baud_rate, conf->can_status_rate_hz);
+    Serial.printf("[%lu] 📥 Deserialized config: ID=%d, Baud=%d, Rate=%d Hz\n",
+                 millis(), conf->controller_id, conf->can_baud_rate, conf->can_status_rate_hz);
 
     return true;
 }

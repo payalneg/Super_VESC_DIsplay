@@ -42,10 +42,10 @@
 #include "vesc_handler.h"            // VESC command handler
 
 void DriverTask(void *parameter) {
-  Serial.println("\n🚀 DriverTask started");
-  Serial.printf("🔧 BLE Mode: %s\n", BLE_MODE_NAME);
-  Serial.printf("📋 Description: %s\n", BLE_MODE_DESC);
-  Serial.printf("📡 CAN Bus: TX=GPIO6, RX=GPIO0, Speed=250kbps, Device ID=%d\n\n", CONF_CONTROLLER_ID);
+  Serial.printf("[%lu] 🚀 DriverTask started\n", millis());
+  Serial.printf("[%lu] 🔧 BLE Mode: %s\n", millis(), BLE_MODE_NAME);
+  Serial.printf("[%lu] 📋 Description: %s\n", millis(), BLE_MODE_DESC);
+  Serial.printf("[%lu] 📡 CAN Bus: TX=GPIO6, RX=GPIO0, Speed=250kbps, Device ID=%d\n\n", millis(), CONF_CONTROLLER_ID);
   
   while(1){
     BLE_Loop();       // Process BLE communication
@@ -68,7 +68,7 @@ void setup()
 {
   Serial.begin(115200);
   delay(5000);
-  Serial.println("VESC Display Starting...");
+  Serial.printf("[%lu] VESC Display Starting...\n", millis());
   
   // Initialize display and backlight first
   Backlight_Init();
@@ -76,10 +76,10 @@ void setup()
   
   // Initialize touch screen (it will initialize its own I2C)
   if (Touch_Init()) {
-    Serial.println("Touch screen initialized successfully!");
+    Serial.printf("[%lu] Touch screen initialized successfully!\n", millis());
     //Touch_Debug_Info();  // Print debug information
   } else {
-    Serial.println("Touch screen initialization failed!");
+    Serial.printf("[%lu] Touch screen initialization failed!\n", millis());
   }
   
   // Initialize I2C for other peripherals on different pins
@@ -113,13 +113,13 @@ void setup()
   Serial.println("\n╔════════════════════════════════════════════════╗");
   Serial.println("║      🚀 CAN Communication Started 🚀          ║");
   Serial.println("╠════════════════════════════════════════════════╣");
-  Serial.printf("║ Hardware:           %-25s ║\n", HW_NAME);
-  Serial.printf("║ Firmware:           v%d.%02d                     ║\n", FW_VERSION_MAJOR, FW_VERSION_MINOR);
-  Serial.printf("║ Device CAN ID:      %3d                       ║\n", vesc_can_id);
-  Serial.printf("║ Device Type:        HW_TYPE_CUSTOM_MODULE     ║\n");
-  Serial.printf("║ CAN Speed:          250 kbps                  ║\n");
-  Serial.printf("║ TX Pin:             GPIO 6                    ║\n");
-  Serial.printf("║ RX Pin:             GPIO 0                    ║\n");
+  Serial.printf("[%lu] ║ Hardware:           %-25s ║\n", millis(), HW_NAME);
+  Serial.printf("[%lu] ║ Firmware:           v%d.%02d                     ║\n", millis(), FW_VERSION_MAJOR, FW_VERSION_MINOR);
+  Serial.printf("[%lu] ║ Device CAN ID:      %3d                       ║\n", millis(), vesc_can_id);
+  Serial.printf("[%lu] ║ Device Type:        HW_TYPE_CUSTOM_MODULE     ║\n", millis());
+  Serial.printf("[%lu] ║ CAN Speed:          250 kbps                  ║\n", millis());
+  Serial.printf("[%lu] ║ TX Pin:             GPIO 6                    ║\n", millis());
+  Serial.printf("[%lu] ║ RX Pin:             GPIO 0                    ║\n", millis());
   Serial.println("╠════════════════════════════════════════════════╣");
 #ifdef BLE_MODE_BRIDGE
   Serial.println("║ 🌉 BLE Mode:        BRIDGE (vesc_express)     ║");
@@ -137,20 +137,20 @@ void setup()
   
   // Initialize BLE Server
   if (BLE_Init()) {
-    Serial.println("✅ BLE initialized successfully");
+    Serial.printf("[%lu] ✅ BLE initialized successfully\n", millis());
     
     // Register BLE response callback in vesc_handler
     vesc_handler_set_response_callback(BLE_SendFramedResponse);
-    Serial.println("✅ BLE response callback registered in VESC handler");
+    Serial.printf("[%lu] ✅ BLE response callback registered in VESC handler\n", millis());
   } else {
-    Serial.println("❌ BLE initialization failed");
+    Serial.printf("[%lu] ❌ BLE initialization failed\n", millis());
   }
   
   // Initialize LVGL with dashboard
   Lvgl_Init();
 
   // Start the VESC display and communication task
-  Serial.println("VESC Display Ready!");
+  Serial.printf("[%lu] VESC Display Ready!\n", millis());
   Driver_Loop();
 }
 
