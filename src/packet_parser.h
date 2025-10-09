@@ -13,9 +13,8 @@
 
 // Packet framing bytes
 #define PACKET_START_BYTE_SHORT   0x02
-#define PACKET_END_BYTE_SHORT     0x03
-#define PACKET_START_BYTE_LONG    0x04
-#define PACKET_END_BYTE_LONG      0x05
+#define PACKET_START_BYTE_LONG    0x03
+#define PACKET_END_BYTE		      0x03
 
 // Parser states
 typedef enum {

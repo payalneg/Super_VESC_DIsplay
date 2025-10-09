@@ -175,7 +175,7 @@ uint16_t packet_build_frame(uint8_t* payload, uint16_t payload_len,
 	out_buffer[ind++] = crc & 0xFF;
 	
 	// End byte
-	out_buffer[ind++] = use_long_packet ? PACKET_END_BYTE_LONG : PACKET_END_BYTE_SHORT;
+	out_buffer[ind++] = PACKET_END_BYTE;
 	
 	Serial.printf("[%lu] 📦 Built framed packet: %d bytes (payload: %d, CRC: 0x%04X)\n", 
 	             millis(), ind, payload_len, crc);
