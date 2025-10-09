@@ -66,50 +66,36 @@ void BLE_OnPacketParsed(uint8_t* data, uint16_t len) {
 #ifdef BLE_MODE_BRIDGE
   // ============================================================================
   // BLE-CAN Bridge Mode (like vesc_express)
+  // Packet parser has already extracted clean payload (without 02/03 framing)
+  // Just forward the entire payload to CAN bus
   // ============================================================================
   
-  // Extract target VESC ID and command
-  uint8_t target_vesc_id = 255; // Default: broadcast to all VESCs
-  uint8_t* command_data = data;
-  uint16_t command_len = len;
+  // The data[] is already parsed payload from BLE packet:
+  // Example: BLE receives "02 01 11 02 10 03"
+  //          Parser extracts: data[0]=0x11 (payload), len=1
+  //          0x11 = 17 = CAN_PACKET_PING
   
-  // Check if first byte is a VESC ID (0x01-0xFE) or a command (0x00 or high values)
-  uint8_t first_byte = data[0];
-  
-  // If first byte looks like an ID (typical range 1-254), treat it as target ID
-  if (first_byte > 0 && first_byte < 0xFE && first_byte != CONF_CONTROLLER_ID) {
-    // First byte is target VESC ID
-    target_vesc_id = first_byte;
-    command_data = data + 1;
-    command_len = len - 1;
-    Serial.printf("📍 BLE→CAN: Target VESC ID=%d, Command=0x%02X\n", 
-                  target_vesc_id, command_len > 0 ? command_data[0] : 0xFF);
-  } else if (first_byte == CONF_CONTROLLER_ID) {
-    // Addressed to our device - process locally
-    Serial.printf("📍 BLE→Local: Processing command locally (ID=%d)\n", CONF_CONTROLLER_ID);
-    
-    if (len > 1) {
-      vesc_handler_process_command(data + 1, len - 1);
-    }
-    return;
-  } else {
-    // First byte is a command, broadcast to all VESCs
-    Serial.printf("📍 BLE→CAN: Broadcasting command 0x%02X to all VESCs\n", first_byte);
+  Serial.printf("📦 BLE→CAN: Received payload (%d bytes): ", len);
+  for (int i = 0; i < len && i < 16; i++) {
+    Serial.printf("%02X ", data[i]);
   }
+  if (len > 16) Serial.printf("... (%d more)", len - 16);
+  Serial.println();
   
-  // Forward command to CAN bus via PROCESS_RX_BUFFER / PROCESS_SHORT_BUFFER protocol
-  // send_type = 0: wait for response and send it back
-  if (command_len > 0) {
-    waiting_for_can_response = true;
-    expected_response_vesc_id = target_vesc_id;
-    
-    Serial.printf("🔄 BLE→CAN: Forwarding %d bytes to VESC %d (waiting for response)\n", 
-                  command_len, target_vesc_id);
-    
-    // Use comm_can_send_buffer which handles fragmentation automatically
-    // send_type = 0: commands_send in CAN protocol (wait for response)
-    comm_can_send_buffer(target_vesc_id, command_data, command_len, 0);
-  }
+  // Forward entire payload to CAN bus
+  // comm_can_send_buffer handles:
+  // - Fragmentation (FILL_RX_BUFFER if >6 bytes)
+  // - CRC calculation
+  // - PROCESS_RX_BUFFER / PROCESS_SHORT_BUFFER wrapping
+  
+  uint8_t target_vesc_id = 255; // Broadcast to all VESCs by default
+  waiting_for_can_response = true;
+  expected_response_vesc_id = target_vesc_id;
+  
+  Serial.printf("🔄 BLE→CAN: Forwarding to CAN bus (broadcast to all VESCs)\n");
+  
+  // send_type = 0: commands_send (wait for response and send it back)
+  comm_can_send_buffer(target_vesc_id, data, len, 0);
   
 #endif // BLE_MODE_BRIDGE
 
