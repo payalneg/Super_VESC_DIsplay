@@ -3,6 +3,7 @@
 #include "comm_can.h"
 #include "packet_parser.h"
 #include "vesc_handler.h"
+#include "debug_log.h"
 
 // BLE Configuration variables
 int MTU_SIZE = 23;
@@ -30,22 +31,22 @@ static QueueHandle_t ble_command_queue = NULL;
 // BLE Server Callbacks Implementation
 void MyServerCallbacks::onConnect(NimBLEServer *pServer, ble_gap_conn_desc *desc)
 {
-  Serial.printf("🔵 BLE Client connected: %s\n", NimBLEAddress(desc->peer_ota_addr).toString().c_str());
+  LOG_INFO(BLE, "🔵 Client connected: %s", NimBLEAddress(desc->peer_ota_addr).toString().c_str());
   deviceConnected = true;
   NimBLEDevice::startAdvertising();
 }
 
 void MyServerCallbacks::onDisconnect(NimBLEServer *pServer)
 {
-  Serial.printf("[%lu] 🔵 BLE Client disconnected\n", millis());
+  LOG_INFO(BLE, "🔵 Client disconnected");
   deviceConnected = false;
   NimBLEDevice::startAdvertising();
 }
 
 void MyServerCallbacks::onMTUChange(uint16_t MTU, ble_gap_conn_desc *desc)
 {
-  Serial.printf("[%lu] 🔵 BLE MTU changed - new size %d, peer %s\n", millis(), MTU, NimBLEAddress(desc->peer_ota_addr).toString().c_str());
-  Serial.printf("[%lu] 🔵 BLE Packet size adjusted to %d bytes\n", millis(), MTU - 3);
+  LOG_INFO(BLE, "🔵 MTU changed - new size %d, peer %s", MTU, NimBLEAddress(desc->peer_ota_addr).toString().c_str());
+  LOG_INFO(BLE, "🔵 Packet size adjusted to %d bytes", MTU - 3);
   MTU_SIZE = MTU;
   PACKET_SIZE = MTU_SIZE - 3;
   if (PACKET_SIZE > 120) {
@@ -61,7 +62,7 @@ static uint8_t expected_response_vesc_id = 255;
 
 // Packet processed callback - called when valid packet is parsed from BLE
 void BLE_OnPacketParsed(uint8_t* data, uint16_t len) {
-  Serial.printf("[%lu] 📦 BLE: Parsed complete packet (%d bytes)\n", millis(), len);
+  LOG_DEBUG(BLE, "📦 Parsed complete packet (%d bytes)", len);
   
   if (len < 1) {
     return;
@@ -79,12 +80,7 @@ void BLE_OnPacketParsed(uint8_t* data, uint16_t len) {
   //          Parser extracts: data[0]=0x11 (payload), len=1
   //          0x11 = 17 = CAN_PACKET_PING
   
-  Serial.printf("[%lu] 📦 BLE→CAN: Received payload (%d bytes): ", millis(), len);
-  for (int i = 0; i < len && i < 16; i++) {
-    Serial.printf("%02X ", data[i]);
-  }
-  if (len > 16) Serial.printf("... (%d more)", len - 16);
-  Serial.println();
+  LOG_HEX(BLE, data, len, "📦 BLE→CAN: Received payload: ");
   
   // Forward entire payload to CAN bus
   // comm_can_send_buffer handles:
@@ -96,7 +92,7 @@ void BLE_OnPacketParsed(uint8_t* data, uint16_t len) {
   waiting_for_can_response = true;
   expected_response_vesc_id = target_vesc_id;
   
-  Serial.printf("[%lu] 🔄 BLE→CAN: Forwarding to CAN bus (broadcast to all VESCs)\n", millis());
+  LOG_DEBUG(BLE, "🔄 BLE→CAN: Forwarding to CAN bus (broadcast to all VESCs)");
   
   // send_type = 0: commands_send (wait for response and send it back)
   comm_can_send_buffer(target_vesc_id, data, len, 0);
@@ -113,7 +109,7 @@ void BLE_OnPacketParsed(uint8_t* data, uint16_t len) {
   
   // Check if first byte is our device address (02)
   if (first_byte == CONF_CONTROLLER_ID) {
-    Serial.printf("📍 BLE→Local: Packet addressed to device (ID=%d)\n", CONF_CONTROLLER_ID);
+    LOG_DEBUG(BLE, "📍 BLE→Local: Packet addressed to device (ID=%d)", CONF_CONTROLLER_ID);
     
     // Skip the address byte and process the rest as a VESC command
     if (len > 1) {
@@ -121,7 +117,7 @@ void BLE_OnPacketParsed(uint8_t* data, uint16_t len) {
     }
   } else {
     // Otherwise, treat the whole packet as a VESC command
-    Serial.printf("📍 BLE→Local: Processing as direct VESC command\n");
+    LOG_DEBUG(BLE, "📍 BLE→Local: Processing as direct VESC command");
     vesc_handler_process_command(data, len);
   }
   
@@ -131,17 +127,13 @@ void BLE_OnPacketParsed(uint8_t* data, uint16_t len) {
 // BLE Characteristic Callbacks Implementation
 void MyCallbacks::onWrite(BLECharacteristic *pCharacteristic)
 {
-  //Serial.printf("BLE onWrite to characteristics: %s\n", pCharacteristic->getUUID().toString().c_str());
+  //LOG_VERBOSE(BLE, "onWrite to characteristics: %s", pCharacteristic->getUUID().toString().c_str());
   std::string rxValue = pCharacteristic->getValue();
   if (rxValue.length() > 0)
   {
     if (pCharacteristic->getUUID().equals(pCharacteristicVescRx->getUUID()))
     {
-      Serial.printf("[%lu] 📥 BLE: received %d bytes: ", millis(), rxValue.length());
-      for (int i = 0; i < rxValue.length(); i++) {
-        Serial.printf("%02X ", (uint8_t)rxValue[i]);
-      }
-      Serial.println();
+      LOG_HEX(BLE, (uint8_t*)rxValue.data(), rxValue.length(), "📥 Received bytes: ");
       
       // Process each byte through the packet parser
       for (size_t i = 0; i < rxValue.length(); i++) {
@@ -150,7 +142,7 @@ void MyCallbacks::onWrite(BLECharacteristic *pCharacteristic)
                                                           BLE_OnPacketParsed);
         
         if (packet_complete) {
-          Serial.printf("[%lu] ✅ BLE: Packet successfully parsed and processed\n", millis());
+          LOG_DEBUG(BLE, "✅ Packet successfully parsed and processed");
         }
       }
     }
@@ -195,7 +187,7 @@ bool BLE_Init() {
     pAdvertising->addServiceUUID(VESC_SERVICE_UUID);
     pAdvertising->start();
     
-    Serial.printf("[%lu] 🔵 BLE Server initialized - waiting for client connection...\n", millis());
+    LOG_INFO(BLE, "🔵 Server initialized - waiting for client connection...");
     
     // Initialize command queue
     if (!BLE_InitCommandQueue()) {
@@ -204,12 +196,12 @@ bool BLE_Init() {
     
     // Initialize packet parser
     packet_parser_init(&ble_packet_parser);
-    Serial.printf("[%lu] 🔵 BLE: Packet parser initialized\n", millis());
+    LOG_INFO(BLE, "🔵 Packet parser initialized");
     
     return true;
   }
   catch (const std::exception& e) {
-    Serial.printf("❌ BLE initialization failed: %s\n", e.what());
+    LOG_ERROR(BLE, "Initialization failed: %s", e.what());
     return false;
   }
 }
@@ -343,17 +335,17 @@ void BLE_SendVESCResponse(uint32_t can_id, uint8_t* data, uint8_t len) {
     //for (int i = 0; i < len && i < 16; i++) { // Limit to first 16 bytes for readability
     //  Serial.printf("%02X ", data[i]);
     //}
-    //if (len > 16) Serial.printf("... (%d more bytes)", len - 16);
-    //Serial.println();
+    //if (len > 16) LOG_RAW("... (%d more bytes)", len - 16);
+    //LOG_RAW("\n");
   } else {
-    Serial.printf("⚠️  BLE: VESC response too large (%d > %d bytes)\n", len, PACKET_SIZE);
+    LOG_WARN(BLE, "VESC response too large (%d > %d bytes)", len, PACKET_SIZE);
     
     // For large responses, we might need to fragment them
     // For now, just send what fits
     if (PACKET_SIZE > 0) {
       pCharacteristicVescTx->setValue(data, PACKET_SIZE);
       pCharacteristicVescTx->notify();
-      Serial.printf("⚠️  BLE: Sent truncated VESC response (%d of %d bytes)\n", PACKET_SIZE, len);
+      LOG_WARN(BLE, "Sent truncated VESC response (%d of %d bytes)", PACKET_SIZE, len);
     }
   }
 }
@@ -361,18 +353,14 @@ void BLE_SendVESCResponse(uint32_t can_id, uint8_t* data, uint8_t len) {
 // Process CAN command received from BLE
 bool BLE_ProcessCANCommand(uint8_t* data, uint8_t len) {
   if (len < sizeof(ble_can_message_t)) {
-    Serial.printf("❌ BLE: Invalid CAN message size: %d\n", len);
+    LOG_ERROR(BLE, "Invalid CAN message size: %d", len);
     return false;
   }
   
   ble_can_message_t* can_msg = (ble_can_message_t*)data;
   
-  Serial.printf("📥 BLE: Received CAN command ID=0x%03X, Len=%d, Data=", 
-                can_msg->can_id, can_msg->data_length);
-  for (int i = 0; i < can_msg->data_length; i++) {
-    Serial.printf("%02X ", can_msg->data[i]);
-  }
-  Serial.println();
+  LOG_DEBUG(BLE, "📥 Received CAN command ID=0x%03X, Len=%d", can_msg->can_id, can_msg->data_length);
+  LOG_HEX(BLE, can_msg->data, can_msg->data_length, "Data: ");
   
   // Forward to VESC via CAN
   BLE_ForwardCANToVESC(can_msg->data, can_msg->data_length);
@@ -382,7 +370,7 @@ bool BLE_ProcessCANCommand(uint8_t* data, uint8_t len) {
 // Forward CAN data to VESC (using existing CAN infrastructure)
 void BLE_ForwardCANToVESC(uint8_t* can_data, uint8_t len) {
   if (len < 4) {
-    Serial.printf("⚠️  BLE->CAN: Invalid data length %d\n", len);
+    LOG_WARN(BLE, "BLE->CAN: Invalid data length %d", len);
     return;
   }
   
@@ -397,7 +385,7 @@ void BLE_ForwardCANToVESC(uint8_t* can_data, uint8_t len) {
     uint8_t packet_type = (can_id >> 8) & 0xFF;
     uint8_t vesc_id = can_id & 0xFF;
     
-    Serial.printf("🎯 BLE->CAN: Raw packet Type=0x%02X, VESC=%d, Value=%d\n", packet_type, vesc_id, value);
+    LOG_DEBUG(BLE, "🎯 BLE->CAN: Raw packet Type=0x%02X, VESC=%d, Value=%d", packet_type, vesc_id, value);
     
     // Send raw CAN message
     uint8_t raw_data[4];
@@ -413,7 +401,7 @@ void BLE_ForwardCANToVESC(uint8_t* can_data, uint8_t len) {
       case 0x00: // Set duty cycle (CAN_PACKET_SET_DUTY)
         {
           float duty = (float)value / 100000.0f; // VESC duty scaling
-          Serial.printf("[%lu] 🎯 BLE->CAN: Setting duty %.3f\n", millis(), duty);
+          LOG_DEBUG(BLE, "🎯 BLE->CAN: Setting duty %.3f", duty);
           comm_can_set_duty(255, duty);
         }
         break;
@@ -421,7 +409,7 @@ void BLE_ForwardCANToVESC(uint8_t* can_data, uint8_t len) {
       case 0x01: // Set current (CAN_PACKET_SET_CURRENT)
         {
           float current = (float)value / 1000.0f; // VESC current scaling
-          Serial.printf("[%lu] 🎯 BLE->CAN: Setting current %.2fA\n", millis(), current);
+          LOG_DEBUG(BLE, "🎯 BLE->CAN: Setting current %.2fA", current);
           comm_can_set_current(255, current);
         }
         break;
@@ -429,7 +417,7 @@ void BLE_ForwardCANToVESC(uint8_t* can_data, uint8_t len) {
       case 0x02: // Set brake current (CAN_PACKET_SET_CURRENT_BRAKE)
         {
           float current = (float)value / 1000.0f;
-          Serial.printf("[%lu] 🎯 BLE->CAN: Setting brake current %.2fA\n", millis(), current);
+          LOG_DEBUG(BLE, "🎯 BLE->CAN: Setting brake current %.2fA", current);
           comm_can_set_current_brake(255, current);
         }
         break;
@@ -437,13 +425,13 @@ void BLE_ForwardCANToVESC(uint8_t* can_data, uint8_t len) {
       case 0x03: // Set RPM (CAN_PACKET_SET_RPM)
         {
           float rpm = (float)value;
-          Serial.printf("[%lu] 🎯 BLE->CAN: Setting RPM %.0f\n", millis(), rpm);
+          LOG_DEBUG(BLE, "🎯 BLE->CAN: Setting RPM %.0f", rpm);
           comm_can_set_rpm(255, rpm);
         }
         break;
         
       case 0x11: // Ping (CAN_PACKET_PING)
-        Serial.printf("[%lu] 🎯 BLE->CAN: Sending ping\n", millis());
+        LOG_DEBUG(BLE, "🎯 BLE->CAN: Sending ping");
         {
           HW_TYPE hw_type;
           comm_can_ping(255, &hw_type);
@@ -451,12 +439,12 @@ void BLE_ForwardCANToVESC(uint8_t* can_data, uint8_t len) {
         break;
         
       case 0xFF: // Request status (custom command)
-        Serial.printf("[%lu] 🎯 BLE->CAN: Requesting VESC status\n", millis());
+        LOG_DEBUG(BLE, "🎯 BLE->CAN: Requesting VESC status");
         // Status is received automatically from VESC STATUS packets
         break;
         
       default:
-        Serial.printf("[%lu] ⚠️  BLE->CAN: Unknown command type 0x%02X\n", millis(), can_data[0]);
+        LOG_WARN(BLE, "BLE->CAN: Unknown command type 0x%02X", can_data[0]);
         break;
     }
   }
@@ -480,9 +468,9 @@ void BLE_ProcessReceivedData() {
         
         // Queue using proper VESC fragmentation protocol
         if (BLE_QueueCommand((uint8_t*)vescBuffer.data(), vescBuffer.length(), target_vesc_id, send_type)) {
-          //Serial.printf("[%lu] 📥 BLE->Queue: Queued VESC command buffer (%d bytes) for VESC %d\n", millis(), vescBuffer.length(), target_vesc_id);
+          //LOG_VERBOSE(BLE, "📥 BLE->Queue: Queued VESC command buffer (%d bytes) for VESC %d", vescBuffer.length(), target_vesc_id);
         } else {
-          Serial.printf("[%lu] ❌ BLE: Failed to queue VESC command buffer (%d bytes)\n", millis(), vescBuffer.length());
+          LOG_ERROR(BLE, "Failed to queue VESC command buffer (%d bytes)", vescBuffer.length());
         }
         vescBuffer.clear();
         return;
@@ -506,29 +494,29 @@ void BLE_ProcessReceivedData() {
       
       if (command.startsWith("DUTY:")) {
         float duty = command.substring(5).toFloat();
-        Serial.printf("[%lu] 🎯 BLE: Text command - Setting duty %.3f\n", millis(), duty);
+        LOG_DEBUG(BLE, "🎯 Text command - Setting duty %.3f", duty);
         comm_can_set_duty(255, duty);
       } else if (command.startsWith("CURR:")) {
         float current = command.substring(5).toFloat();
-        Serial.printf("[%lu] 🎯 BLE: Text command - Setting current %.2fA\n", millis(), current);
+        LOG_DEBUG(BLE, "🎯 Text command - Setting current %.2fA", current);
         comm_can_set_current(255, current);
       } else if (command.startsWith("RPM:")) {
         float rpm = command.substring(4).toFloat();
-        Serial.printf("[%lu] 🎯 BLE: Text command - Setting RPM %.0f\n", millis(), rpm);
+        LOG_DEBUG(BLE, "🎯 Text command - Setting RPM %.0f", rpm);
         comm_can_set_rpm(255, rpm);
       } else if (command == "STATUS") {
-        Serial.printf("[%lu] 🎯 BLE: Text command - Requesting status\n", millis());
+        LOG_DEBUG(BLE, "🎯 Text command - Requesting status");
         // Status is received automatically from VESC STATUS packets
       } else if (command == "FW_VERSION") {
-        Serial.printf("[%lu] 🎯 BLE: Text command - Requesting firmware version\n", millis());
+        LOG_DEBUG(BLE, "🎯 Text command - Requesting firmware version");
         uint8_t fw_cmd = 0x00; // COMM_FW_VERSION
         BLE_QueueCommand(&fw_cmd, 1, 255, 0);
       } else if (command == "GET_VALUES") {
-        Serial.printf("[%lu] 🎯 BLE: Text command - Requesting values\n", millis());
+        LOG_DEBUG(BLE, "🎯 Text command - Requesting values");
         uint8_t get_cmd = 0x04; // COMM_GET_VALUES
         BLE_QueueCommand(&get_cmd, 1, 255, 0);
       } else {
-        Serial.printf("[%lu] ⚠️  BLE: Unknown text command: %s\n", millis(), command.c_str());
+        LOG_WARN(BLE, "Unknown text command: %s", command.c_str());
       }
     }
     
@@ -591,22 +579,22 @@ void BLE_Loop() {
 bool BLE_InitCommandQueue() {
   ble_command_queue = xQueueCreate(BLE_QUEUE_SIZE, sizeof(ble_command_t));
   if (ble_command_queue == NULL) {
-    Serial.printf("[%lu] ❌ BLE: Failed to create command queue\n", millis());
+    LOG_ERROR(BLE, "Failed to create command queue");
     return false;
   }
-  //Serial.printf("[%lu] ✅ BLE: Command queue initialized (size: %d)\n", millis(), BLE_QUEUE_SIZE);
+  //LOG_INFO(BLE, "Command queue initialized (size: %d)", BLE_QUEUE_SIZE);
   return true;
 }
 
 // Queue a command for processing in main loop
 bool BLE_QueueCommand(uint8_t* data, uint16_t length, uint8_t target_vesc_id, uint8_t send_type) {
   if (ble_command_queue == NULL) {
-    Serial.printf("[%lu] ❌ BLE: Command queue not initialized\n", millis());
+    LOG_ERROR(BLE, "Command queue not initialized");
     return false;
   }
   
   if (length > BLE_CMD_BUFFER_SIZE) {
-    Serial.printf("[%lu] ❌ BLE: Command too large (%d > %d bytes)\n", millis(), length, BLE_CMD_BUFFER_SIZE);
+    LOG_ERROR(BLE, "Command too large (%d > %d bytes)", length, BLE_CMD_BUFFER_SIZE);
     return false;
   }
   
@@ -618,11 +606,11 @@ bool BLE_QueueCommand(uint8_t* data, uint16_t length, uint8_t target_vesc_id, ui
   
   BaseType_t result = xQueueSend(ble_command_queue, &cmd, 0); // Non-blocking
   if (result != pdTRUE) {
-    Serial.printf("[%lu] ⚠️  BLE: Command queue full, dropping command\n", millis());
+    LOG_WARN(BLE, "Command queue full, dropping command");
     return false;
   }
   
-  //Serial.printf("[%lu] 📥 BLE: Queued command (%d bytes) for VESC %d\n", millis(), length, target_vesc_id);
+  //LOG_VERBOSE(BLE, "Queued command (%d bytes) for VESC %d", length, target_vesc_id);
   return true;
 }
 
@@ -648,7 +636,7 @@ void BLE_ProcessCommandQueue() {
 // Send framed response via BLE (callback for vesc_handler - local commands)
 void BLE_SendFramedResponse(uint8_t* data, unsigned int len) {
   if (!deviceConnected || !pCharacteristicVescTx) {
-    Serial.printf("[%lu] ⚠️  BLE: Cannot send response - not connected\n", millis());
+    LOG_WARN(BLE, "Cannot send response - not connected");
     return;
   }
   
@@ -657,7 +645,7 @@ void BLE_SendFramedResponse(uint8_t* data, unsigned int len) {
   uint16_t framed_len = packet_build_frame(data, len, framed_buffer, sizeof(framed_buffer));
   
   if (framed_len == 0) {
-    Serial.printf("[%lu] ❌ BLE: Failed to build framed packet\n", millis());
+    LOG_ERROR(BLE, "Failed to build framed packet");
     return;
   }
   
@@ -666,15 +654,11 @@ void BLE_SendFramedResponse(uint8_t* data, unsigned int len) {
     pCharacteristicVescTx->setValue(framed_buffer, framed_len);
     pCharacteristicVescTx->notify();
     
-    Serial.printf("[%lu] 📤 BLE←Local: Sent framed response (%d bytes total, %d payload): ", millis(), framed_len, len);
-    for (int i = 0; i < framed_len && i < 20; i++) {
-      Serial.printf("%02X ", framed_buffer[i]);
-    }
-    if (framed_len > 20) Serial.printf("... (%d more)", framed_len - 20);
-    Serial.println();
+    LOG_DEBUG(BLE, "📤 BLE←Local: Sent framed response (%d bytes total, %d payload)", framed_len, len);
+    LOG_HEX(BLE, framed_buffer, framed_len, "");
   } else {
     // Need to fragment the response
-    Serial.printf("[%lu] ⚠️  BLE←Local: Response too large (%d > %d), fragmenting...\n", millis(), framed_len, PACKET_SIZE);
+    LOG_WARN(BLE, "BLE←Local: Response too large (%d > %d), fragmenting...", framed_len, PACKET_SIZE);
     
     int offset = 0;
     while (offset < framed_len) {
@@ -683,7 +667,7 @@ void BLE_SendFramedResponse(uint8_t* data, unsigned int len) {
       pCharacteristicVescTx->setValue(framed_buffer + offset, chunk_size);
       pCharacteristicVescTx->notify();
       
-      Serial.printf("[%lu] 📤 BLE←Local: Sent fragment %d bytes (offset %d)\n", millis(), chunk_size, offset);
+      LOG_DEBUG(BLE, "📤 BLE←Local: Sent fragment %d bytes (offset %d)", chunk_size, offset);
       offset += chunk_size;
       
       // Small delay between fragments
@@ -700,7 +684,7 @@ void BLE_OnCANResponse(uint8_t* data, unsigned int len) {
     return;
   }
   
-  Serial.printf("[%lu] 📦 CAN→BLE: Received CAN response (%d bytes), forwarding to BLE\n", millis(), len);
+  LOG_DEBUG(BLE, "📦 CAN→BLE: Received CAN response (%d bytes), forwarding to BLE", len);
   
   // Forward the response to BLE with framing
   waiting_for_can_response = false; // Reset flag
@@ -710,7 +694,7 @@ void BLE_OnCANResponse(uint8_t* data, unsigned int len) {
   uint16_t framed_len = packet_build_frame(data, len, framed_buffer, sizeof(framed_buffer));
   
   if (framed_len == 0) {
-    Serial.printf("[%lu] ❌ BLE←CAN: Failed to build framed packet\n", millis());
+    LOG_ERROR(BLE, "BLE←CAN: Failed to build framed packet");
     return;
   }
   
@@ -719,15 +703,11 @@ void BLE_OnCANResponse(uint8_t* data, unsigned int len) {
     pCharacteristicVescTx->setValue(framed_buffer, framed_len);
     pCharacteristicVescTx->notify();
     
-    Serial.printf("[%lu] 📤 BLE←CAN: Sent framed response (%d bytes total, %d payload): ", millis(), framed_len, len);
-    for (int i = 0; i < framed_len && i < 20; i++) {
-      Serial.printf("%02X ", framed_buffer[i]);
-    }
-    if (framed_len > 20) Serial.printf("... (%d more)", framed_len - 20);
-    Serial.println();
+    LOG_DEBUG(BLE, "📤 BLE←CAN: Sent framed response (%d bytes total, %d payload)", framed_len, len);
+    LOG_HEX(BLE, framed_buffer, framed_len, "");
   } else {
     // Need to fragment the response
-    Serial.printf("[%lu] ⚠️  BLE←CAN: Response too large (%d > %d), fragmenting...\n", millis(), framed_len, PACKET_SIZE);
+    LOG_WARN(BLE, "BLE←CAN: Response too large (%d > %d), fragmenting...", framed_len, PACKET_SIZE);
     
     int offset = 0;
     while (offset < framed_len) {
@@ -736,7 +716,7 @@ void BLE_OnCANResponse(uint8_t* data, unsigned int len) {
       pCharacteristicVescTx->setValue(framed_buffer + offset, chunk_size);
       pCharacteristicVescTx->notify();
       
-      Serial.printf("[%lu] 📤 BLE←CAN: Sent fragment %d bytes (offset %d)\n", millis(), chunk_size, offset);
+      LOG_DEBUG(BLE, "📤 BLE←CAN: Sent fragment %d bytes (offset %d)", chunk_size, offset);
       offset += chunk_size;
       
       // Small delay between fragments

@@ -7,6 +7,7 @@
 
 #include "packet_parser.h"
 #include "crc.h"
+#include "debug_log.h"
 #include <Arduino.h>
 #include <string.h>
 
@@ -46,36 +47,36 @@ bool packet_parser_process_byte(packet_parser_t* parser, uint8_t byte,
 			}
 			break;
 			
-		case PARSER_STATE_LENGTH:
-			parser->payload_length = byte;
-			
-			if (parser->payload_length == 0 || parser->payload_length > sizeof(parser->buffer)) {
-				Serial.printf("[%lu] ❌ Invalid payload length: %d\n", millis(), parser->payload_length);
-				packet_parser_reset(parser);
-				return false;
-			}
-			
-			parser->state = PARSER_STATE_PAYLOAD;
-			parser->bytes_received = 0;
-			break;
+	case PARSER_STATE_LENGTH:
+		parser->payload_length = byte;
+		
+		if (parser->payload_length == 0 || parser->payload_length > sizeof(parser->buffer)) {
+			LOG_ERROR(PACKET, "Invalid payload length: %d", parser->payload_length);
+			packet_parser_reset(parser);
+			return false;
+		}
+		
+		parser->state = PARSER_STATE_PAYLOAD;
+		parser->bytes_received = 0;
+		break;
 			
 		case PARSER_STATE_LENGTH_HIGH:
 			parser->payload_length = byte << 8;
 			parser->state = PARSER_STATE_LENGTH_LOW;
 			break;
 			
-		case PARSER_STATE_LENGTH_LOW:
-			parser->payload_length |= byte;
-			
-			if (parser->payload_length == 0 || parser->payload_length > sizeof(parser->buffer)) {
-				Serial.printf("[%lu] ❌ Invalid payload length: %d\n", millis(), parser->payload_length);
-				packet_parser_reset(parser);
-				return false;
-			}
-			
-			parser->state = PARSER_STATE_PAYLOAD;
-			parser->bytes_received = 0;
-			break;
+	case PARSER_STATE_LENGTH_LOW:
+		parser->payload_length |= byte;
+		
+		if (parser->payload_length == 0 || parser->payload_length > sizeof(parser->buffer)) {
+			LOG_ERROR(PACKET, "Invalid payload length: %d", parser->payload_length);
+			packet_parser_reset(parser);
+			return false;
+		}
+		
+		parser->state = PARSER_STATE_PAYLOAD;
+		parser->bytes_received = 0;
+		break;
 			
 		case PARSER_STATE_PAYLOAD:
 			parser->buffer[parser->bytes_received++] = byte;
@@ -95,38 +96,35 @@ bool packet_parser_process_byte(packet_parser_t* parser, uint8_t byte,
 			parser->state = PARSER_STATE_END_BYTE;
 			break;
 			
-		case PARSER_STATE_END_BYTE: {
-			bool valid_end = (byte == PACKET_END_BYTE);
-			
-			if (!valid_end) {
-				Serial.printf("[%lu] ❌ Invalid end byte: 0x%02X (expected 0x%02X)\n", 
-				             millis(), byte, PACKET_END_BYTE);
-				packet_parser_reset(parser);
-				return false;
-			}
-			
-			// Verify CRC
-			uint16_t crc_calculated = crc16(parser->buffer, parser->payload_length);
-			
-			if (crc_calculated != parser->crc_received) {
-				Serial.printf("[%lu] ❌ CRC mismatch: calculated=0x%04X, received=0x%04X\n", 
-				             millis(), crc_calculated, parser->crc_received);
-				packet_parser_reset(parser);
-				return false;
-			}
-			
-			// Packet is valid! Call callback
-			Serial.printf("[%lu] ✅ Valid packet received: %d bytes (CRC: 0x%04X)\n", 
-			             millis(), parser->payload_length, crc_calculated);
-			
-			if (callback) {
-				callback(parser->buffer, parser->payload_length);
-			}
-			
+	case PARSER_STATE_END_BYTE: {
+		bool valid_end = (byte == PACKET_END_BYTE);
+		
+		if (!valid_end) {
+			LOG_ERROR(PACKET, "Invalid end byte: 0x%02X (expected 0x%02X)", byte, PACKET_END_BYTE);
 			packet_parser_reset(parser);
-			return true;
+			return false;
 		}
-		break;
+		
+		// Verify CRC
+		uint16_t crc_calculated = crc16(parser->buffer, parser->payload_length);
+		
+		if (crc_calculated != parser->crc_received) {
+			LOG_ERROR(PACKET, "CRC mismatch: calculated=0x%04X, received=0x%04X", crc_calculated, parser->crc_received);
+			packet_parser_reset(parser);
+			return false;
+		}
+		
+		// Packet is valid! Call callback
+		LOG_DEBUG(PACKET, "✅ Valid packet received: %d bytes (CRC: 0x%04X)", parser->payload_length, crc_calculated);
+		
+		if (callback) {
+			callback(parser->buffer, parser->payload_length);
+		}
+		
+		packet_parser_reset(parser);
+		return true;
+	}
+	break;
 	}
 	
 	return false;
@@ -137,7 +135,7 @@ uint16_t packet_build_frame(uint8_t* payload, uint16_t payload_len,
                             uint8_t* out_buffer, uint16_t out_buffer_size) {
 	
 	if (payload_len == 0 || payload_len > 512) {
-		Serial.printf("[%lu] ❌ Invalid payload length for framing: %d\n", millis(), payload_len);
+		LOG_ERROR(PACKET, "Invalid payload length for framing: %d", payload_len);
 		return 0;
 	}
 	
@@ -147,7 +145,7 @@ uint16_t packet_build_frame(uint8_t* payload, uint16_t payload_len,
 	                       (1 + 1 + payload_len + 2 + 1);   // start + len(1) + payload + crc(2) + end
 	
 	if (total_length > out_buffer_size) {
-		Serial.printf("[%lu] ❌ Output buffer too small: need %d, have %d\n", millis(), total_length, out_buffer_size);
+		LOG_ERROR(PACKET, "Output buffer too small: need %d, have %d", total_length, out_buffer_size);
 		return 0;
 	}
 	
@@ -176,8 +174,7 @@ uint16_t packet_build_frame(uint8_t* payload, uint16_t payload_len,
 	// End byte
 	out_buffer[ind++] = PACKET_END_BYTE;
 	
-	Serial.printf("[%lu] 📦 Built framed packet: %d bytes (payload: %d, CRC: 0x%04X)\n", 
-	             millis(), ind, payload_len, crc);
+	LOG_VERBOSE(PACKET, "📦 Built framed packet: %d bytes (payload: %d, CRC: 0x%04X)", ind, payload_len, crc);
 	
 	return ind;
 }

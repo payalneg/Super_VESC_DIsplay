@@ -40,12 +40,13 @@
 #include "buffer.h"                  // Buffer utility functions
 #include "datatypes.h"               // VESC data types
 #include "vesc_handler.h"            // VESC command handler
+#include "debug_log.h"               // Logging system
 
 void DriverTask(void *parameter) {
-  Serial.printf("[%lu] 🚀 DriverTask started\n", millis());
-  Serial.printf("[%lu] 🔧 BLE Mode: %s\n", millis(), BLE_MODE_NAME);
-  Serial.printf("[%lu] 📋 Description: %s\n", millis(), BLE_MODE_DESC);
-  Serial.printf("[%lu] 📡 CAN Bus: TX=GPIO6, RX=GPIO0, Speed=250kbps, Device ID=%d\n\n", millis(), CONF_CONTROLLER_ID);
+  LOG_INFO(SYSTEM, "🚀 DriverTask started");
+  LOG_INFO(SYSTEM, "🔧 BLE Mode: %s", BLE_MODE_NAME);
+  LOG_INFO(SYSTEM, "📋 Description: %s", BLE_MODE_DESC);
+  LOG_INFO(SYSTEM, "📡 CAN Bus: TX=GPIO6, RX=GPIO0, Speed=250kbps, Device ID=%d\n", CONF_CONTROLLER_ID);
   
   while(1){
     BLE_Loop();       // Process BLE communication
@@ -68,7 +69,7 @@ void setup()
 {
   Serial.begin(115200);
   delay(5000);
-  Serial.printf("[%lu] VESC Display Starting...\n", millis());
+  LOG_INFO(SYSTEM, "VESC Display Starting...");
   
   // Initialize display and backlight first
   Backlight_Init();
@@ -76,10 +77,10 @@ void setup()
   
   // Initialize touch screen (it will initialize its own I2C)
   if (Touch_Init()) {
-    Serial.printf("[%lu] Touch screen initialized successfully!\n", millis());
+    LOG_INFO(SYSTEM, "Touch screen initialized successfully!");
     //Touch_Debug_Info();  // Print debug information
   } else {
-    Serial.printf("[%lu] Touch screen initialization failed!\n", millis());
+    LOG_ERROR(SYSTEM, "Touch screen initialization failed!");
   }
   
   // Initialize I2C for other peripherals on different pins
@@ -110,47 +111,47 @@ void setup()
   
 #endif
   
-  Serial.println("\n╔════════════════════════════════════════════════╗");
-  Serial.println("║      🚀 CAN Communication Started 🚀          ║");
-  Serial.println("╠════════════════════════════════════════════════╣");
-  Serial.printf("[%lu] ║ Hardware:           %-25s ║\n", millis(), HW_NAME);
-  Serial.printf("[%lu] ║ Firmware:           v%d.%02d                     ║\n", millis(), FW_VERSION_MAJOR, FW_VERSION_MINOR);
-  Serial.printf("[%lu] ║ Device CAN ID:      %3d                       ║\n", millis(), vesc_can_id);
-  Serial.printf("[%lu] ║ Device Type:        HW_TYPE_CUSTOM_MODULE     ║\n", millis());
-  Serial.printf("[%lu] ║ CAN Speed:          250 kbps                  ║\n", millis());
-  Serial.printf("[%lu] ║ TX Pin:             GPIO 6                    ║\n", millis());
-  Serial.printf("[%lu] ║ RX Pin:             GPIO 0                    ║\n", millis());
-  Serial.println("╠════════════════════════════════════════════════╣");
+  LOG_RAW("\n╔════════════════════════════════════════════════╗\n");
+  LOG_RAW("║      🚀 CAN Communication Started 🚀          ║\n");
+  LOG_RAW("╠════════════════════════════════════════════════╣\n");
+  LOG_RAW("║ Hardware:           %-25s ║\n", HW_NAME);
+  LOG_RAW("║ Firmware:           v%d.%02d                     ║\n", FW_VERSION_MAJOR, FW_VERSION_MINOR);
+  LOG_RAW("║ Device CAN ID:      %3d                       ║\n", vesc_can_id);
+  LOG_RAW("║ Device Type:        HW_TYPE_CUSTOM_MODULE     ║\n");
+  LOG_RAW("║ CAN Speed:          250 kbps                  ║\n");
+  LOG_RAW("║ TX Pin:             GPIO 6                    ║\n");
+  LOG_RAW("║ RX Pin:             GPIO 0                    ║\n");
+  LOG_RAW("╠════════════════════════════════════════════════╣\n");
 #ifdef BLE_MODE_BRIDGE
-  Serial.println("║ 🌉 BLE Mode:        BRIDGE (vesc_express)     ║");
-  Serial.println("║ 📱 BLE Device:      SuperVESCDisplay          ║");
-  Serial.println("║ 📋 Local Commands:  ENABLED (ID=2)            ║");
-  Serial.println("║ 🔄 CAN Forwarding:  ENABLED (all other IDs)   ║");
+  LOG_RAW("║ 🌉 BLE Mode:        BRIDGE (vesc_express)     ║\n");
+  LOG_RAW("║ 📱 BLE Device:      SuperVESCDisplay          ║\n");
+  LOG_RAW("║ 📋 Local Commands:  ENABLED (ID=2)            ║\n");
+  LOG_RAW("║ 🔄 CAN Forwarding:  ENABLED (all other IDs)   ║\n");
 #else
-  Serial.println("║ 🌉 BLE Mode:        DIRECT (standalone)       ║");
-  Serial.println("║ 📱 BLE Device:      SuperVESCDisplay          ║");
-  Serial.println("║ 📋 Local Commands:  ALL commands processed    ║");
-  Serial.println("║ 🔄 CAN Forwarding:  DISABLED                  ║");
+  LOG_RAW("║ 🌉 BLE Mode:        DIRECT (standalone)       ║\n");
+  LOG_RAW("║ 📱 BLE Device:      SuperVESCDisplay          ║\n");
+  LOG_RAW("║ 📋 Local Commands:  ALL commands processed    ║\n");
+  LOG_RAW("║ 🔄 CAN Forwarding:  DISABLED                  ║\n");
 #endif
-  Serial.println("╚════════════════════════════════════════════════╝");
-  Serial.println("\n⏳ Waiting for BLE/CAN messages...\n");
+  LOG_RAW("╚════════════════════════════════════════════════╝\n");
+  LOG_RAW("\n⏳ Waiting for BLE/CAN messages...\n\n");
   
   // Initialize BLE Server
   if (BLE_Init()) {
-    Serial.printf("[%lu] ✅ BLE initialized successfully\n", millis());
+    LOG_INFO(SYSTEM, "BLE initialized successfully");
     
     // Register BLE response callback in vesc_handler
     vesc_handler_set_response_callback(BLE_SendFramedResponse);
-    Serial.printf("[%lu] ✅ BLE response callback registered in VESC handler\n", millis());
+    LOG_INFO(SYSTEM, "BLE response callback registered in VESC handler");
   } else {
-    Serial.printf("[%lu] ❌ BLE initialization failed\n", millis());
+    LOG_ERROR(SYSTEM, "BLE initialization failed");
   }
   
   // Initialize LVGL with dashboard
   Lvgl_Init();
 
   // Start the VESC display and communication task
-  Serial.printf("[%lu] VESC Display Ready!\n", millis());
+  LOG_INFO(SYSTEM, "VESC Display Ready!");
   Driver_Loop();
 }
 

@@ -10,6 +10,7 @@
 #include "buffer.h"
 #include "datatypes.h"
 #include "confparser.h"
+#include "debug_log.h"
 #include <Arduino.h>
 #include <string.h>
 #include <esp_mac.h>
@@ -35,23 +36,23 @@ void vesc_handler_init(void) {
 	size_t config_size = preferences.getBytesLength("main_config");
 	if (config_size == sizeof(main_config_t)) {
 		preferences.getBytes("main_config", &current_config, sizeof(main_config_t));
-		Serial.printf("[%lu] ✅ Config loaded from NVS: ID=%d, Baud=%d, Rate=%d Hz\n",
-		             millis(), current_config.controller_id, 
-		             current_config.can_baud_rate,
-		             current_config.can_status_rate_hz);
+		LOG_INFO(VESC, "Config loaded from NVS: ID=%d, Baud=%d, Rate=%d Hz",
+		         current_config.controller_id, 
+		         current_config.can_baud_rate,
+		         current_config.can_status_rate_hz);
 	} else {
 		// Set defaults if no config found
 		confparser_set_defaults_main_config_t(&current_config);
-		Serial.printf("[%lu] ✅ Config set to defaults (no saved config)\n", millis());
+		LOG_INFO(VESC, "Config set to defaults (no saved config)");
 	}
 	
-	Serial.printf("[%lu] ✅ VESC Handler initialized\n", millis());
+	LOG_INFO(VESC, "Handler initialized");
 }
 
 // Helper function to save config to NVS
 static void save_config_to_nvs(void) {
 	preferences.putBytes("main_config", &current_config, sizeof(main_config_t));
-	Serial.printf("[%lu] 💾 Config saved to NVS\n", millis());
+	LOG_INFO(VESC, "💾 Config saved to NVS");
 }
 
 uint32_t vesc_handler_get_command_count(void) {
@@ -64,7 +65,7 @@ const main_config_t* vesc_handler_get_config(void) {
 
 void vesc_handler_set_response_callback(vesc_response_callback_t callback) {
 	response_callback = callback;
-	Serial.printf("[%lu] ✅ VESC Handler: Response callback %s\n", millis(), callback ? "enabled" : "disabled");
+	LOG_INFO(VESC, "Response callback %s", callback ? "enabled" : "disabled");
 }
 
 void vesc_handler_process_command(unsigned char *data, unsigned int len) {
@@ -74,11 +75,11 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len) {
 	command_count++;
 	
 	// Log incoming command
-	Serial.printf("[%lu] [VESC CMD #%04d] Len=%d, CMD=0x%02X ", millis(), command_count, len, cmd);
+	LOG_DEBUG(VESC, "[CMD #%04d] Len=%d, CMD=0x%02X", command_count, len, cmd);
 	
 	switch (cmd) {
 		case COMM_FW_VERSION: {
-			Serial.printf("(FW_VERSION) - Sending response\n");
+			LOG_DEBUG(VESC, "(FW_VERSION) - Sending response");
 			
 			uint8_t send_buffer[80];
 			int32_t ind = 0;
@@ -124,11 +125,11 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len) {
 			} else {
 				comm_can_send_buffer(255, send_buffer, ind, 1); // Send to broadcast
 			}
-			Serial.printf("[%lu] ✅ FW_VERSION response sent: %s v%d.%02d\n", millis(), HW_NAME, FW_VERSION_MAJOR, FW_VERSION_MINOR);
+			LOG_DEBUG(VESC, "✅ FW_VERSION response sent: %s v%d.%02d", HW_NAME, FW_VERSION_MAJOR, FW_VERSION_MINOR);
 		} break;
 		
 		case COMM_GET_VALUES: {
-			Serial.printf("(GET_VALUES) - Sending dummy response\n");
+			LOG_DEBUG(VESC, "(GET_VALUES) - Sending dummy response");
 			
 			uint8_t send_buffer[70];
 			int32_t ind = 0;
@@ -171,38 +172,38 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len) {
 				comm_can_send_buffer(255, send_buffer, ind, 1);
 			}
 			}
-			Serial.printf("[%lu] ✅ GET_VALUES response sent\n", millis());
+			LOG_DEBUG(VESC, "✅ GET_VALUES response sent");
 		} break;
 		
 		case COMM_SET_DUTY:
-			Serial.printf("(SET_DUTY)\n");
+			LOG_DEBUG(VESC, "(SET_DUTY)");
 			break;
 			
 		case COMM_SET_CURRENT:
-			Serial.printf("(SET_CURRENT)\n");
+			LOG_DEBUG(VESC, "(SET_CURRENT)");
 			break;
 			
 		case COMM_SET_RPM:
-			Serial.printf("(SET_RPM)\n");
+			LOG_DEBUG(VESC, "(SET_RPM)");
 			break;
 			
 		case COMM_SET_CURRENT_BRAKE:
-			Serial.printf("(SET_CURRENT_BRAKE)\n");
+			LOG_DEBUG(VESC, "(SET_CURRENT_BRAKE)");
 			break;
 			
 		case COMM_SET_POS:
-			Serial.printf("(SET_POS)\n");
+			LOG_DEBUG(VESC, "(SET_POS)");
 			break;
 			
 		case COMM_GET_VALUES_SELECTIVE: {
-			Serial.printf("(GET_VALUES_SELECTIVE)\n");
+			LOG_DEBUG(VESC, "(GET_VALUES_SELECTIVE)");
 			
 			// Parse which values are requested
 			uint32_t mask = 0;
 			if (len >= 5) {
 				int32_t ind = 1;
 				mask = buffer_get_uint32(data, &ind);
-				Serial.printf("[%lu]    Requested values mask: 0x%08X\n", millis(), mask);
+				LOG_DEBUG(VESC, "   Requested values mask: 0x%08X", mask);
 			}
 			
 			// For now, send empty response
@@ -220,7 +221,7 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len) {
 		} break;
 		
 		case COMM_GET_CUSTOM_CONFIG_XML:
-			Serial.printf("(GET_CUSTOM_CONFIG_XML) - Not implemented\n");
+			LOG_DEBUG(VESC, "(GET_CUSTOM_CONFIG_XML) - Not implemented");
 			// Send empty response
 			{
 				uint8_t send_buffer[2];
@@ -231,7 +232,7 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len) {
 			break;
 			
     case COMM_GET_CUSTOM_CONFIG:
-        Serial.printf("(GET_CUSTOM_CONFIG) - Sending config\n");
+        LOG_DEBUG(VESC, "(GET_CUSTOM_CONFIG) - Sending config");
         {
             uint8_t send_buffer[80];
             int32_t ind = 0;
@@ -244,7 +245,7 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len) {
 
             // Only support config index 0
             if (conf_ind != 0) {
-                Serial.printf("[%lu]    ↳ Config index != 0, ignoring\n", millis());
+                LOG_DEBUG(VESC, "   ↳ Config index != 0, ignoring");
                 break;
             }
 
@@ -257,12 +258,12 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len) {
             ind += serialized_len;
 
             comm_can_send_buffer(255, send_buffer, ind, 1);
-            Serial.printf("[%lu] ✅ Custom config sent: %d bytes total\n", millis(), ind);
+            LOG_DEBUG(VESC, "✅ Custom config sent: %d bytes total", ind);
 			}
 			break;
 			
 		case COMM_GET_CUSTOM_CONFIG_DEFAULT:
-			Serial.printf("(GET_CUSTOM_CONFIG_DEFAULT) - Sending default config\n");
+			LOG_DEBUG(VESC, "(GET_CUSTOM_CONFIG_DEFAULT) - Sending default config");
 			{
 				uint8_t send_buffer[80];
 				int32_t ind = 0;
@@ -275,7 +276,7 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len) {
 				
 				// Only support config index 0
 				if (conf_ind != 0) {
-					Serial.printf("[%lu]    ↳ Config index != 0, ignoring\n", millis());
+					LOG_DEBUG(VESC, "   ↳ Config index != 0, ignoring");
 					break;
 				}
 				
@@ -296,12 +297,12 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len) {
 			} else {
 				comm_can_send_buffer(255, send_buffer, ind, 1);
 			}
-				Serial.printf("[%lu] ✅ Default custom config sent: %d bytes total\n", millis(), ind);
+				LOG_DEBUG(VESC, "✅ Default custom config sent: %d bytes total", ind);
 			}
 			break;
 			
 		case COMM_SET_CUSTOM_CONFIG:
-			Serial.printf("(SET_CUSTOM_CONFIG) - Setting new config\n");
+			LOG_DEBUG(VESC, "(SET_CUSTOM_CONFIG) - Setting new config");
 			{
 				// Parse config index from request
 				int conf_ind = 0;
@@ -311,7 +312,7 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len) {
 				
 				// Only support config index 0
 				if (conf_ind != 0) {
-					Serial.printf("[%lu]    ↳ Config index != 0, ignoring\n", millis());
+					LOG_DEBUG(VESC, "   ↳ Config index != 0, ignoring");
 					break;
 				}
 				
@@ -340,56 +341,50 @@ void vesc_handler_process_command(unsigned char *data, unsigned int len) {
 				comm_can_send_buffer(255, send_buffer, ind, 1);
 			}
 					
-					Serial.printf("[%lu] ✅ Config updated successfully!\n", millis());
-					Serial.printf("[%lu]    ID=%d, Baud=%d, Rate=%d Hz\n",
-					             millis(), current_config.controller_id,
-					             current_config.can_baud_rate,
-					             current_config.can_status_rate_hz);
+					LOG_INFO(VESC, "✅ Config updated successfully!");
+					LOG_INFO(VESC, "   ID=%d, Baud=%d, Rate=%d Hz",
+					         current_config.controller_id,
+					         current_config.can_baud_rate,
+					         current_config.can_status_rate_hz);
 					
 					if (baud_changed) {
-						Serial.printf("[%lu] ⚠️ CAN baud rate changed! Restart required for changes to take effect.\n", millis());
+						LOG_WARN(VESC, "CAN baud rate changed! Restart required for changes to take effect.");
 					}
 				} else {
-					Serial.printf("[%lu] ❌ Failed to deserialize config!\n", millis());
+					LOG_ERROR(VESC, "Failed to deserialize config!");
 				}
 			}
 			break;
 			
 		case COMM_BMS_GET_VALUES:
-			Serial.printf("(BMS_GET_VALUES) - Not a BMS\n");
+			LOG_DEBUG(VESC, "(BMS_GET_VALUES) - Not a BMS");
 			break;
 			
 		case COMM_PSW_GET_STATUS:
-			Serial.printf("(PSW_GET_STATUS) - Not a power switch\n");
+			LOG_DEBUG(VESC, "(PSW_GET_STATUS) - Not a power switch");
 			break;
 			
 		case COMM_PSW_SWITCH:
-			Serial.printf("(PSW_SWITCH) - Not a power switch\n");
+			LOG_DEBUG(VESC, "(PSW_SWITCH) - Not a power switch");
 			break;
 			
 		case COMM_IO_BOARD_GET_ALL:
-			Serial.printf("(IO_BOARD_GET_ALL) - Not an IO board\n");
+			LOG_DEBUG(VESC, "(IO_BOARD_GET_ALL) - Not an IO board");
 			break;
 			
 		case COMM_IO_BOARD_SET_PWM:
-			Serial.printf("(IO_BOARD_SET_PWM) - Not an IO board\n");
+			LOG_DEBUG(VESC, "(IO_BOARD_SET_PWM) - Not an IO board");
 			break;
 			
 		case COMM_IO_BOARD_SET_DIGITAL:
-			Serial.printf("(IO_BOARD_SET_DIGITAL) - Not an IO board\n");
+			LOG_DEBUG(VESC, "(IO_BOARD_SET_DIGITAL) - Not an IO board");
 			break;
 		
 		default:
-			Serial.printf("[%lu] (Unknown command 0x%02X)\n", millis(), cmd);
+			LOG_WARN(VESC, "(Unknown command 0x%02X)", cmd);
 			break;
 	}
 	
 	// Log raw HEX for debugging (first 16 bytes)
-	if (len <= 16) {
-		Serial.print("    Raw: ");
-		for (unsigned int i = 0; i < len; i++) {
-			Serial.printf("%02X ", data[i]);
-		}
-		Serial.println();
-	}
+	LOG_HEX(VESC, data, len, "   Raw: ");
 }
