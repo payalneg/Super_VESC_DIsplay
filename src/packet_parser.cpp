@@ -96,12 +96,11 @@ bool packet_parser_process_byte(packet_parser_t* parser, uint8_t byte,
 			break;
 			
 		case PARSER_STATE_END_BYTE: {
-			bool valid_end = (parser->is_long_packet && byte == PACKET_END_BYTE_LONG) ||
-			                (!parser->is_long_packet && byte == PACKET_END_BYTE_SHORT);
+			bool valid_end = (byte == PACKET_END_BYTE);
 			
 			if (!valid_end) {
 				Serial.printf("[%lu] ❌ Invalid end byte: 0x%02X (expected 0x%02X)\n", 
-				             millis(), byte, parser->is_long_packet ? PACKET_END_BYTE_LONG : PACKET_END_BYTE_SHORT);
+				             millis(), byte, PACKET_END_BYTE);
 				packet_parser_reset(parser);
 				return false;
 			}

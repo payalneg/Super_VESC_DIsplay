@@ -55,7 +55,7 @@ static SemaphoreHandle_t ping_sem;
 static SemaphoreHandle_t send_mutex;
 static volatile HW_TYPE ping_hw_last = HW_TYPE_VESC;
 static uint8_t rx_buffer[RX_BUFFER_NUM][RX_BUFFER_SIZE];
-static int rx_buffer_offset[RX_BUFFER_NUM];
+static int rx_buffer_device_id[RX_BUFFER_NUM]; // Device ID for each buffer
 static volatile unsigned int rx_buffer_last_id;
 static volatile unsigned int rx_buffer_response_type = 1;
 
@@ -99,58 +99,74 @@ void decode_msg(uint32_t eid, uint8_t *data8, int len) {
 	// Handle messages addressed to us
 	if (id == 255 || id == can_config.controller_id) {
 		switch (cmd) {
-		case CAN_PACKET_FILL_RX_BUFFER: {
-			int buf_ind = -1;
-			int offset = data8[0];
-			data8++;
-			len--;
+	case CAN_PACKET_FILL_RX_BUFFER: {
+		int buf_ind = -1;
+		int offset = data8[0];
+		data8++;
+		len--;
 
-			for (int i = 0; i < RX_BUFFER_NUM;i++) {
-				if ((rx_buffer_offset[i]) == offset ) {
+		// Find buffer by device ID
+		for (int i = 0; i < RX_BUFFER_NUM; i++) {
+			if (rx_buffer_device_id[i] == id) {
+				buf_ind = i;
+				break;
+			}
+		}
+
+		// If not found and this is start of new packet, find free buffer
+		if (buf_ind < 0 && offset == 0) {
+			for (int i = 0; i < RX_BUFFER_NUM; i++) {
+				if (rx_buffer_device_id[i] == -1) {
 					buf_ind = i;
+					rx_buffer_device_id[i] = id;
 					break;
 				}
 			}
+		}
 
-			if (buf_ind < 0) {
-				if (offset == 0) {
-					buf_ind = 0;
-				} else {
+		// If still not found, drop packet
+		if (buf_ind < 0) {
+			break;
+		}
+
+		memcpy(rx_buffer[buf_ind] + offset, data8, len);
+	} break;
+
+	case CAN_PACKET_FILL_RX_BUFFER_LONG: {
+		int buf_ind = -1;
+		int offset = (int)data8[0] << 8;
+		offset |= data8[1];
+		data8 += 2;
+		len -= 2;
+
+		// Find buffer by device ID
+		for (int i = 0; i < RX_BUFFER_NUM; i++) {
+			if (rx_buffer_device_id[i] == id) {
+				buf_ind = i;
+				break;
+			}
+		}
+
+		// If not found and this is start of new packet, find free buffer
+		if (buf_ind < 0 && offset == 0) {
+			for (int i = 0; i < RX_BUFFER_NUM; i++) {
+				if (rx_buffer_device_id[i] == -1) {
+					buf_ind = i;
+					rx_buffer_device_id[i] = id;
 					break;
 				}
 			}
+		}
 
+		// If still not found, drop packet
+		if (buf_ind < 0) {
+			break;
+		}
+
+		if ((offset + len) <= RX_BUFFER_SIZE) {
 			memcpy(rx_buffer[buf_ind] + offset, data8, len);
-			rx_buffer_offset[buf_ind] = offset + len;
-		} break;
-
-		case CAN_PACKET_FILL_RX_BUFFER_LONG: {
-			int buf_ind = -1;
-			int offset = (int)data8[0] << 8;
-			offset |= data8[1];
-			data8 += 2;
-			len -= 2;
-
-			for (int i = 0; i < RX_BUFFER_NUM;i++) {
-				if ((rx_buffer_offset[i]) == offset ) {
-					buf_ind = i;
-					break;
-				}
-			}
-
-			if (buf_ind < 0) {
-				if (offset == 0) {
-					buf_ind = 0;
-				} else {
-					break;
-				}
-			}
-
-			if ((offset + len) <= RX_BUFFER_SIZE) {
-				memcpy(rx_buffer[buf_ind] + offset, data8, len);
-				rx_buffer_offset[buf_ind] = offset + len;
-			}
-		} break;
+		}
+	} break;
 
 		case CAN_PACKET_PROCESS_RX_BUFFER: {
 			ind = 0;
@@ -174,41 +190,40 @@ void decode_msg(uint32_t eid, uint8_t *data8, int len) {
 				break;
 			}
 
-			int buf_ind = -1;
-			for (int i = 0; i < RX_BUFFER_NUM;i++) {
-				if ((rx_buffer_offset[i]) == rxbuf_len ) {
-					buf_ind = i;
-					break;
-				}
-			}
-
-			// Something is wrong, reset all buffers
-			if (buf_ind < 0) {
-				for (int i = 0; i < RX_BUFFER_NUM;i++) {
-					rx_buffer_offset[i] = 0;
-				}
+		int buf_ind = -1;
+		// Find buffer by device ID
+		for (int i = 0; i < RX_BUFFER_NUM; i++) {
+			if (rx_buffer_device_id[i] == id) {
+				buf_ind = i;
 				break;
 			}
+		}
 
-			rx_buffer_offset[buf_ind] = 0;
+		// Buffer not found for this device
+		if (buf_ind < 0) {
+			break;
+		}
 
-			crc_high = data8[ind++];
-			crc_low = data8[ind++];
+		crc_high = data8[ind++];
+		crc_low = data8[ind++];
 
-			if (crc16(rx_buffer[buf_ind], rxbuf_len)
-					== ((unsigned short) crc_high << 8
-							| (unsigned short) crc_low)) {
-				
-				// Process packet if handler is set
-				if (packet_handler) {
-					packet_handler(rx_buffer[buf_ind], rxbuf_len);
-				}
-				else
-				{
-					Serial.printf("[%lu] no packet handler set\n", millis());
-				}
+		if (crc16(rx_buffer[buf_ind], rxbuf_len)
+				== ((unsigned short) crc_high << 8
+						| (unsigned short) crc_low)) {
+			
+			// Process packet if handler is set
+			if (packet_handler) {
+				packet_handler(rx_buffer[buf_ind], rxbuf_len);
 			}
-		} break;
+			else
+			{
+				Serial.printf("[%lu] no packet handler set\n", millis());
+			}
+		}
+		
+		// Clear buffer after processing
+		rx_buffer_device_id[buf_ind] = -1;
+	} break;
 
 		case CAN_PACKET_PROCESS_SHORT_BUFFER: {
 			ind = 0;
@@ -433,7 +448,7 @@ void comm_can_start(int pin_tx, int pin_rx, uint8_t controller_id) {
 
 	// Initialize rx buffers
 	for (int i = 0;i < RX_BUFFER_NUM;i++) {
-		rx_buffer_offset[i] = 0;
+		rx_buffer_device_id[i] = -1; // -1 means buffer is free
 	}
 
 	// Store configuration
