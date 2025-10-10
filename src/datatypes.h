@@ -241,11 +241,8 @@ typedef enum {
 #define HW_NAME					"Super VESC Display"
 
 // CAN configuration
-#ifdef BLE_MODE_BRIDGE
-#define CONF_CONTROLLER_ID		255
-#else
+// Device CAN ID (our display's ID on the CAN bus)
 #define CONF_CONTROLLER_ID		2
-#endif
 
 #define CONF_CAN_BAUD_RATE		CAN_BAUD_250K
 

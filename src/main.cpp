@@ -44,8 +44,8 @@
 
 void DriverTask(void *parameter) {
   LOG_INFO(SYSTEM, "🚀 DriverTask started");
-  LOG_INFO(SYSTEM, "🔧 BLE Mode: %s", BLE_MODE_NAME);
-  LOG_INFO(SYSTEM, "📋 Description: %s", BLE_MODE_DESC);
+  LOG_INFO(SYSTEM, "🔧 BLE Mode: %s", ble_config_get_mode_name(ble_config_get_mode()));
+  LOG_INFO(SYSTEM, "📋 Description: %s", ble_config_get_mode_desc(ble_config_get_mode()));
   LOG_INFO(SYSTEM, "📡 CAN Bus: TX=GPIO6, RX=GPIO0, Speed=250kbps, Device ID=%d\n", CONF_CONTROLLER_ID);
   
   while(1){
@@ -93,23 +93,22 @@ void setup()
   uint8_t vesc_can_id = CONF_CONTROLLER_ID;
   comm_can_start(GPIO_NUM_6, GPIO_NUM_0, vesc_can_id);
   
-#ifdef BLE_MODE_BRIDGE
-  // ============================================================================
-  // BLE-CAN Bridge Mode: Forward CAN responses to BLE
-  // ============================================================================
-  auto packet_handler_wrapper = [](unsigned char *data, unsigned int len) {
-    // Forward CAN responses to BLE
-    BLE_OnCANResponse(data, len);
-  };
-  comm_can_set_packet_handler(packet_handler_wrapper);
-  
-#else // BLE_MODE_DIRECT
-  // ============================================================================
-  // Direct Mode: Process CAN messages locally
-  // ============================================================================
-  comm_can_set_packet_handler(vesc_handler_process_command);
-  
-#endif
+  // Set CAN packet handler based on current mode
+  if (ble_config_get_mode() == BLE_MODE_BRIDGE) {
+    // ============================================================================
+    // BLE-CAN Bridge Mode: Forward CAN responses to BLE
+    // ============================================================================
+    auto packet_handler_wrapper = [](unsigned char *data, unsigned int len) {
+      // Forward CAN responses to BLE
+      BLE_OnCANResponse(data, len);
+    };
+    comm_can_set_packet_handler(packet_handler_wrapper);
+  } else {
+    // ============================================================================
+    // Direct Mode: Process CAN messages locally
+    // ============================================================================
+    comm_can_set_packet_handler(vesc_handler_process_command);
+  }
   
   LOG_RAW("\n╔════════════════════════════════════════════════╗\n");
   LOG_RAW("║      🚀 CAN Communication Started 🚀          ║\n");
@@ -122,17 +121,20 @@ void setup()
   LOG_RAW("║ TX Pin:             GPIO 6                    ║\n");
   LOG_RAW("║ RX Pin:             GPIO 0                    ║\n");
   LOG_RAW("╠════════════════════════════════════════════════╣\n");
-#ifdef BLE_MODE_BRIDGE
-  LOG_RAW("║ 🌉 BLE Mode:        BRIDGE (vesc_express)     ║\n");
-  LOG_RAW("║ 📱 BLE Device:      SuperVESCDisplay          ║\n");
-  LOG_RAW("║ 📋 Local Commands:  ENABLED (ID=2)            ║\n");
-  LOG_RAW("║ 🔄 CAN Forwarding:  ENABLED (all other IDs)   ║\n");
-#else
-  LOG_RAW("║ 🌉 BLE Mode:        DIRECT (standalone)       ║\n");
-  LOG_RAW("║ 📱 BLE Device:      SuperVESCDisplay          ║\n");
-  LOG_RAW("║ 📋 Local Commands:  ALL commands processed    ║\n");
-  LOG_RAW("║ 🔄 CAN Forwarding:  DISABLED                  ║\n");
-#endif
+  
+  // Display mode-specific info based on current runtime mode
+  if (ble_config_get_mode() == BLE_MODE_BRIDGE) {
+    LOG_RAW("║ 🌉 BLE Mode:        BRIDGE (vesc_express)     ║\n");
+    LOG_RAW("║ 📱 BLE Device:      SuperVESCDisplay          ║\n");
+    LOG_RAW("║ 📋 Local Commands:  ENABLED (ID=2)            ║\n");
+    LOG_RAW("║ 🔄 CAN Forwarding:  ENABLED (all other IDs)   ║\n");
+  } else {
+    LOG_RAW("║ 🌉 BLE Mode:        DIRECT (standalone)       ║\n");
+    LOG_RAW("║ 📱 BLE Device:      SuperVESCDisplay          ║\n");
+    LOG_RAW("║ 📋 Local Commands:  ALL commands processed    ║\n");
+    LOG_RAW("║ 🔄 CAN Forwarding:  DISABLED                  ║\n");
+  }
+  
   LOG_RAW("╚════════════════════════════════════════════════╝\n");
   LOG_RAW("\n⏳ Waiting for BLE/CAN messages...\n\n");
   

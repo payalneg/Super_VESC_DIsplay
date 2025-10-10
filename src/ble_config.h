@@ -2,63 +2,78 @@
 	Copyright 2025 Super VESC Display
 
 	BLE Configuration
-	Define operating mode and settings
+	Operating mode can be changed at runtime (e.g., from menu)
 */
 
 #ifndef BLE_CONFIG_H_
 #define BLE_CONFIG_H_
 
-// ============================================================================
-// BLE Operating Mode Configuration
-// ============================================================================
-
-// Uncomment ONE of the following modes:
-
-// Mode 1: BLE-CAN Bridge (like vesc_express)
-// Commands from BLE are forwarded to CAN bus, responses sent back
-#define BLE_MODE_BRIDGE
-
-// Mode 2: Direct Processing (standalone device)
-// Commands from BLE are processed locally by this device
-// #define BLE_MODE_DIRECT
-
-// ============================================================================
-
-// Validate configuration
-#if defined(BLE_MODE_BRIDGE) && defined(BLE_MODE_DIRECT)
-  #error "Cannot enable both BLE_MODE_BRIDGE and BLE_MODE_DIRECT at the same time!"
-#endif
-
-#if !defined(BLE_MODE_BRIDGE) && !defined(BLE_MODE_DIRECT)
-  #error "Must define either BLE_MODE_BRIDGE or BLE_MODE_DIRECT!"
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 // ============================================================================
-// Mode descriptions
+// BLE Operating Mode Configuration (Runtime)
 // ============================================================================
 
-#ifdef BLE_MODE_BRIDGE
-  #define BLE_MODE_NAME "BLE-CAN Bridge"
-  #define BLE_MODE_DESC "Commands forwarded to CAN bus, responses bridged back"
-  /*
-   * BLE-CAN Bridge Mode:
-   * - Mobile app → BLE → Parse → CAN bus → VESC controllers
-   * - VESC responses → CAN → BLE → Mobile app
-   * - Local commands (ID=2) processed by device
-   * - Compatible with VESC Tool and official mobile apps
-   */
-#endif
+// BLE operating modes
+typedef enum {
+  BLE_MODE_BRIDGE = 0,  // BLE-CAN Bridge (like vesc_express)
+  BLE_MODE_DIRECT = 1   // Direct Processing (standalone device)
+} ble_mode_t;
 
-#ifdef BLE_MODE_DIRECT
-  #define BLE_MODE_NAME "Direct Processing"
-  #define BLE_MODE_DESC "Commands processed locally by device"
-  /*
-   * Direct Processing Mode:
-   * - Mobile app → BLE → Parse → Local vesc_handler
-   * - Responses generated locally → BLE → Mobile app
-   * - All commands handled by this device
-   * - No CAN forwarding (device acts as standalone VESC)
-   */
+// ============================================================================
+// Mode Descriptions
+// ============================================================================
+
+/*
+ * BLE_MODE_BRIDGE - BLE-CAN Bridge Mode:
+ * - Mobile app → BLE → Parse → CAN bus → VESC controllers
+ * - VESC responses → CAN → BLE → Mobile app
+ * - Local commands (ID=2) processed by device
+ * - Compatible with VESC Tool and official mobile apps
+ */
+
+/*
+ * BLE_MODE_DIRECT - Direct Processing Mode:
+ * - Mobile app → BLE → Parse → Local vesc_handler
+ * - Responses generated locally → BLE → Mobile app
+ * - All commands handled by this device
+ * - No CAN forwarding (device acts as standalone VESC)
+ */
+
+// ============================================================================
+// Configuration API
+// ============================================================================
+
+/**
+ * Get current BLE operating mode
+ * @return Current mode (BLE_MODE_BRIDGE or BLE_MODE_DIRECT)
+ */
+ble_mode_t ble_config_get_mode(void);
+
+/**
+ * Set BLE operating mode
+ * @param mode New mode to set
+ */
+void ble_config_set_mode(ble_mode_t mode);
+
+/**
+ * Get mode name string
+ * @param mode Mode to get name for
+ * @return Mode name string
+ */
+const char* ble_config_get_mode_name(ble_mode_t mode);
+
+/**
+ * Get mode description string
+ * @param mode Mode to get description for
+ * @return Mode description string
+ */
+const char* ble_config_get_mode_desc(ble_mode_t mode);
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* BLE_CONFIG_H_ */

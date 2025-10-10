@@ -49,16 +49,11 @@ void MyServerCallbacks::onMTUChange(uint16_t MTU, ble_gap_conn_desc *desc)
   LOG_INFO(BLE, "🔵 Packet size adjusted to %d bytes", MTU - 3);
   MTU_SIZE = MTU;
   PACKET_SIZE = MTU_SIZE - 3;
-  if (PACKET_SIZE > 120) {
-    PACKET_SIZE = 120;
-  }
 }
 
-#ifdef BLE_MODE_BRIDGE
-// Track if we're waiting for a CAN response to forward to BLE (Bridge mode only)
+// Track if we're waiting for a CAN response to forward to BLE (used in Bridge mode)
 static bool waiting_for_can_response = false;
 static uint8_t expected_response_vesc_id = 255;
-#endif
 
 // Packet processed callback - called when valid packet is parsed from BLE
 void BLE_OnPacketParsed(uint8_t* data, uint16_t len) {
@@ -68,60 +63,58 @@ void BLE_OnPacketParsed(uint8_t* data, uint16_t len) {
     return;
   }
   
-#ifdef BLE_MODE_BRIDGE
-  // ============================================================================
-  // BLE-CAN Bridge Mode (like vesc_express)
-  // Packet parser has already extracted clean payload (without 02/03 framing)
-  // Just forward the entire payload to CAN bus
-  // ============================================================================
-  
-  // The data[] is already parsed payload from BLE packet:
-  // Example: BLE receives "02 01 11 02 10 03"
-  //          Parser extracts: data[0]=0x11 (payload), len=1
-  //          0x11 = 17 = CAN_PACKET_PING
-  
-  LOG_HEX(BLE, data, len, "📦 BLE→CAN: Received payload: ");
-  
-  // Forward entire payload to CAN bus
-  // comm_can_send_buffer handles:
-  // - Fragmentation (FILL_RX_BUFFER if >6 bytes)
-  // - CRC calculation
-  // - PROCESS_RX_BUFFER / PROCESS_SHORT_BUFFER wrapping
-  
-  uint8_t target_vesc_id = 255; // Broadcast to all VESCs by default
-  waiting_for_can_response = true;
-  expected_response_vesc_id = target_vesc_id;
-  
-  LOG_DEBUG(BLE, "🔄 BLE→CAN: Forwarding to CAN bus (broadcast to all VESCs)");
-  
-  // send_type = 0: commands_send (wait for response and send it back)
-  comm_can_send_buffer(target_vesc_id, data, len, 0);
-  
-#endif // BLE_MODE_BRIDGE
-
-#ifdef BLE_MODE_DIRECT
-  // ============================================================================
-  // Direct Processing Mode (standalone device)
-  // ============================================================================
-  
-  // Check if this is addressed to our device (default CAN ID = 2)
-  uint8_t first_byte = data[0];
-  
-  // Check if first byte is our device address (02)
-  if (first_byte == CONF_CONTROLLER_ID) {
-    LOG_DEBUG(BLE, "📍 BLE→Local: Packet addressed to device (ID=%d)", CONF_CONTROLLER_ID);
+  // Check current operating mode (runtime selection)
+  if (ble_config_get_mode() == BLE_MODE_BRIDGE) {
+    // ============================================================================
+    // BLE-CAN Bridge Mode (like vesc_express)
+    // Packet parser has already extracted clean payload (without 02/03 framing)
+    // Just forward the entire payload to CAN bus
+    // ============================================================================
     
-    // Skip the address byte and process the rest as a VESC command
-    if (len > 1) {
-      vesc_handler_process_command(data + 1, len - 1);
+    // The data[] is already parsed payload from BLE packet:
+    // Example: BLE receives "02 01 11 02 10 03"
+    //          Parser extracts: data[0]=0x11 (payload), len=1
+    //          0x11 = 17 = CAN_PACKET_PING
+    
+    LOG_HEX(BLE, data, len, "📦 BLE→CAN: Received payload: ");
+    
+    // Forward entire payload to CAN bus
+    // comm_can_send_buffer handles:
+    // - Fragmentation (FILL_RX_BUFFER if >6 bytes)
+    // - CRC calculation
+    // - PROCESS_RX_BUFFER / PROCESS_SHORT_BUFFER wrapping
+    
+    uint8_t target_vesc_id = 255; // Broadcast to all VESCs by default
+    waiting_for_can_response = true;
+    expected_response_vesc_id = target_vesc_id;
+    
+    LOG_DEBUG(BLE, "🔄 BLE→CAN: Forwarding to CAN bus (broadcast to all VESCs)");
+    
+    // send_type = 0: commands_send (wait for response and send it back)
+    comm_can_send_buffer(target_vesc_id, data, len, 0);
+    
+  } else { // BLE_MODE_DIRECT
+    // ============================================================================
+    // Direct Processing Mode (standalone device)
+    // ============================================================================
+    
+    // Check if this is addressed to our device (default CAN ID = 2)
+    uint8_t first_byte = data[0];
+    
+    // Check if first byte is our device address (02)
+    if (first_byte == CONF_CONTROLLER_ID) {
+      LOG_DEBUG(BLE, "📍 BLE→Local: Packet addressed to device (ID=%d)", CONF_CONTROLLER_ID);
+      
+      // Skip the address byte and process the rest as a VESC command
+      if (len > 1) {
+        vesc_handler_process_command(data + 1, len - 1);
+      }
+    } else {
+      // Otherwise, treat the whole packet as a VESC command
+      LOG_DEBUG(BLE, "📍 BLE→Local: Processing as direct VESC command");
+      vesc_handler_process_command(data, len);
     }
-  } else {
-    // Otherwise, treat the whole packet as a VESC command
-    LOG_DEBUG(BLE, "📍 BLE→Local: Processing as direct VESC command");
-    vesc_handler_process_command(data, len);
   }
-  
-#endif // BLE_MODE_DIRECT
 }
 
 // BLE Characteristic Callbacks Implementation
@@ -676,7 +669,6 @@ void BLE_SendFramedResponse(uint8_t* data, unsigned int len) {
   }
 }
 
-#ifdef BLE_MODE_BRIDGE
 // CAN response handler - called when CAN response is received (Bridge mode only)
 void BLE_OnCANResponse(uint8_t* data, unsigned int len) {
   // Only forward if we're waiting for a response and BLE is connected
@@ -724,4 +716,3 @@ void BLE_OnCANResponse(uint8_t* data, unsigned int len) {
     }
   }
 }
-#endif // BLE_MODE_BRIDGE
