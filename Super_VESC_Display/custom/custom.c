@@ -270,7 +270,7 @@ void update_fps(int fps)
     if (fps < min_fps) {
         min_fps = fps;
     }
-    char text[10];
+    char text[20];
     sprintf(text,"FPS:%d, Min:%d", fps, min_fps);
     lv_textarea_set_text(guider_ui.dashboard_fps_text,text);
 }
