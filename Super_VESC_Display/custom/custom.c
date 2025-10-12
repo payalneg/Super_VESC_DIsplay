@@ -262,7 +262,7 @@ void update_odometer(float odometer)
 void update_fps(int fps)
 {
     static int old_value = -999;
-    static min_fps = 400;
+    static int min_fps = 400;
     if (fps == old_value) {
         return;
     }
