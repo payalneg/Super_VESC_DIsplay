@@ -274,4 +274,3 @@ void update_fps(int fps)
     sprintf(text,"FPS:%d, Min:%d", fps, min_fps);
     lv_textarea_set_text(guider_ui.dashboard_fps_text,text);
 }
-z
