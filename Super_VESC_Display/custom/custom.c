@@ -289,14 +289,15 @@ void update_fps(int fps)
 
 void update_uptime(uint32_t uptime)
 {
+    int value = uptime/10;
     static uint32_t old_value = -999;
-    if (uptime == old_value) {
+    if (value == old_value) {
         return;
     }
-    old_value = uptime;
+    old_value = value;
     
     char text[20];
-    sprintf(text,"%02d:%02d:%02d", uptime/3600, (uptime%3600)/60, uptime%60);
+    sprintf(text,"%02d:%02d:%02d", value/3600, (value%3600)/60, value%60);
     lv_textarea_set_text(guider_ui.dashboard_uptime_text,text);
 }
 
