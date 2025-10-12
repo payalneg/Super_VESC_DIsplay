@@ -85,6 +85,12 @@ void music_album_next(bool next)
 
 void update_current(float current)
 {
+    static float old_value = -999.0f;
+    if (current == old_value) {
+        return;
+    }
+    old_value = current;
+    
     int value = current;
     int abs_value = abs(value);
     
@@ -107,6 +113,12 @@ void update_current(float current)
 
 void update_speed(float speed)
 {
+    static float old_value = -999.0f;
+    if (speed == old_value) {
+        return;
+    }
+    old_value = speed;
+    
     int value = speed;
     
     lv_meter_set_indicator_value(guider_ui.dashboard_Speed_meter, guider_ui.dashboard_Speed_meter_scale_0_ndline_0, value);
@@ -119,6 +131,12 @@ void update_speed(float speed)
 
 void update_battery_proc(float battery_proc)
 {
+    static float old_value = -999.0f;
+    if (battery_proc == old_value) {
+        return;
+    }
+    old_value = battery_proc;
+    
     int value = battery_proc;
     
     lv_meter_set_indicator_value(guider_ui.dashboard_Battery_meter, guider_ui.dashboard_Battery_meter_scale_0_ndline_0, 100-value);
@@ -131,6 +149,12 @@ void update_battery_proc(float battery_proc)
 
 void update_trip(float trip_distance)
 {
+    static float old_value = -999.0f;
+    if (trip_distance == old_value) {
+        return;
+    }
+    old_value = trip_distance;
+    
     char text[10];
     sprintf(text,"%0.1f", trip_distance);
     lv_textarea_set_text(guider_ui.dashboard_TRIP_text,text);
@@ -138,6 +162,12 @@ void update_trip(float trip_distance)
 
 void update_range(float range_distance)
 {
+    static float old_value = -999.0f;
+    if (range_distance == old_value) {
+        return;
+    }
+    old_value = range_distance;
+    
     char text[10];
     sprintf(text,"%.1f", range_distance);
     lv_textarea_set_text(guider_ui.dashboard_Range_text,text);
@@ -145,6 +175,12 @@ void update_range(float range_distance)
 
 void update_temp_fet(float temp_fet)
 {
+    static float old_value = -999.0f;
+    if (temp_fet == old_value) {
+        return;
+    }
+    old_value = temp_fet;
+    
     int value = temp_fet;
     char text[10];
     sprintf(text,"%d", value);
@@ -153,6 +189,12 @@ void update_temp_fet(float temp_fet)
 
 void update_temp_motor(float temp_motor)
 {
+    static float old_value = -999.0f;
+    if (temp_motor == old_value) {
+        return;
+    }
+    old_value = temp_motor;
+    
     int value = temp_motor;
     char text[10];
     sprintf(text,"%d", value);
@@ -161,6 +203,12 @@ void update_temp_motor(float temp_motor)
 
 void update_amp_hours(float amp_hours)
 {
+    static float old_value = -999.0f;
+    if (amp_hours == old_value) {
+        return;
+    }
+    old_value = amp_hours;
+    
     char text[10];
     sprintf(text,"%.1f", amp_hours);
     lv_textarea_set_text(guider_ui.dashboard_Ah_text,text);
@@ -168,6 +216,12 @@ void update_amp_hours(float amp_hours)
 
 void update_battery_temp(float battery_temp)
 {
+    static float old_value = -999.0f;
+    if (battery_temp == old_value) {
+        return;
+    }
+    old_value = battery_temp;
+    
     int value = battery_temp;
     char text[10];
     sprintf(text,"%d", value);
@@ -177,6 +231,12 @@ void update_battery_temp(float battery_temp)
 
 void update_battery_voltage(float battery_voltage)
 {
+    static float old_value = -999.0f;
+    if (battery_voltage == old_value) {
+        return;
+    }
+    old_value = battery_voltage;
+    
     char text[10];
     sprintf(text,"%.1f", battery_voltage);
 
@@ -186,6 +246,12 @@ void update_battery_voltage(float battery_voltage)
 
 void update_odometer(float odometer)
 {
+    static float old_value = -999.0f;
+    if (odometer == old_value) {
+        return;
+    }
+    old_value = odometer;
+    
     int value = odometer;   
     char text[10];
     sprintf(text,"%05d", value);
@@ -195,7 +261,17 @@ void update_odometer(float odometer)
 
 void update_fps(int fps)
 {
+    static int old_value = -999;
+    static min_fps = 400;
+    if (fps == old_value) {
+        return;
+    }
+    old_value = fps;
+    if (fps < min_fps) {
+        min_fps = fps;
+    }
     char text[10];
-    sprintf(text,"%d", fps);
+    sprintf(text,"FPS:%d, Min:%d", fps, min_fps);
     lv_textarea_set_text(guider_ui.dashboard_fps_text,text);
 }
+z

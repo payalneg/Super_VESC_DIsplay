@@ -1377,8 +1377,8 @@ void setup_scr_dashboard(lv_ui *ui)
 #if LV_USE_KEYBOARD != 0 || LV_USE_ZH_KEYBOARD != 0
     lv_obj_add_event_cb(ui->dashboard_fps_text, ta_event_cb, LV_EVENT_ALL, ui->g_kb_top_layer);
 #endif
-    lv_obj_set_pos(ui->dashboard_fps_text, 379, 445);
-    lv_obj_set_size(ui->dashboard_fps_text, 95, 31);
+    lv_obj_set_pos(ui->dashboard_fps_text, 315, 445);
+    lv_obj_set_size(ui->dashboard_fps_text, 158, 30);
 
     //Write style for dashboard_fps_text, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
     lv_obj_set_style_text_color(ui->dashboard_fps_text, lv_color_hex(0xFFFFFF), LV_PART_MAIN|LV_STATE_DEFAULT);

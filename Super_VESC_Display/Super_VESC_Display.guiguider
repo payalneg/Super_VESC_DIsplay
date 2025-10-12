@@ -239,13 +239,13 @@
 					"name": "fps_text",
 					"id": "h423kb4g",
 					"type": "ta",
-					"left": 379,
+					"left": 315,
 					"top": 445,
 					"visible": true,
 					"isLock": false,
 					"flag": [],
-					"width": 95,
-					"height": 31,
+					"width": 158,
+					"height": 30,
 					"default_style": false,
 					"text": "FPS",
 					"password_mode": false,
@@ -8971,12 +8971,12 @@
 						"visible": true,
 						"flag": [],
 						"pos": [
-							379,
+							315,
 							445
 						],
 						"size": [
-							95,
-							31
+							158,
+							30
 						],
 						"default_style": false,
 						"text": "FPS",
