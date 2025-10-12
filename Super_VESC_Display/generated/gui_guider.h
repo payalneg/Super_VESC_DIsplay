@@ -69,6 +69,10 @@ typedef struct
 	lv_obj_t *dashboard_ta_23;
 	lv_obj_t *dashboard_temp_bat_text;
 	lv_obj_t *dashboard_ta_25;
+	lv_obj_t *dashboard_ta_26;
+	lv_obj_t *dashboard_uptime_text;
+	lv_obj_t *dashboard_ble_connected_img;
+	lv_obj_t *dashboard_esc_not_connected_text;
 	lv_obj_t *dashboard_slider_1;
 	lv_obj_t *dashboard_slider_2;
 	lv_obj_t *dashboard_slider_3;
@@ -102,6 +106,7 @@ LV_IMG_DECLARE(_grid_480_480x480);
 LV_IMG_DECLARE(_trip_alpha_20x24);
 LV_IMG_DECLARE(_battery_alpha_30x35);
 LV_IMG_DECLARE(_speed_background_alpha_162x162);
+LV_IMG_DECLARE(_ble_con_alpha_43x30);
 
 LV_FONT_DECLARE(lv_font_montserratMedium_13)
 LV_FONT_DECLARE(lv_font_montserratMedium_12)
@@ -111,6 +116,7 @@ LV_FONT_DECLARE(lv_font_Montserrat_I_18)
 LV_FONT_DECLARE(lv_font_Montserrat_I_20)
 LV_FONT_DECLARE(lv_font_Montserrat_I_26)
 LV_FONT_DECLARE(lv_font_Montserrat_I_15)
+LV_FONT_DECLARE(lv_font_Antonio_Regular_22)
 
 
 #ifdef __cplusplus

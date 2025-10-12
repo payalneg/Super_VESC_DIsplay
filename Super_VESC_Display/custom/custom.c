@@ -51,6 +51,16 @@ static void set_position_y(void * gui, int32_t temp)
 void custom_init(lv_ui *ui)
 {
     /* Add your codes here */
+    
+    // Initialize BLE icon as hidden (will be shown when BLE connects)
+    if (ui->dashboard_ble_connected_img != NULL) {
+        lv_obj_add_flag(ui->dashboard_ble_connected_img, LV_OBJ_FLAG_HIDDEN);
+    }
+    
+    // Initialize ESC not connected text as hidden (will be shown and blink if ESC disconnects)
+    if (ui->dashboard_esc_not_connected_text != NULL) {
+        lv_obj_add_flag(ui->dashboard_esc_not_connected_text, LV_OBJ_FLAG_HIDDEN);
+    }
 }
 
 void speed_meter_timer_cb(lv_timer_t * t)
@@ -267,10 +277,78 @@ void update_fps(int fps)
         return;
     }
     old_value = fps;
-    if (fps < min_fps) {
-        min_fps = fps;
+    if (lv_tick_get() > 8000) {
+        if (fps < min_fps) {
+            min_fps = fps;
+        }
     }
     char text[20];
     sprintf(text,"FPS:%d, Min:%d", fps, min_fps);
     lv_textarea_set_text(guider_ui.dashboard_fps_text,text);
+}
+
+void update_uptime(uint32_t uptime)
+{
+    static uint32_t old_value = -999;
+    if (uptime == old_value) {
+        return;
+    }
+    old_value = uptime;
+    
+    char text[20];
+    sprintf(text,"%02d:%02d:%02d", uptime/3600, (uptime%3600)/60, uptime%60);
+    lv_textarea_set_text(guider_ui.dashboard_uptime_text,text);
+}
+
+void update_ble_status(bool connected)
+{
+    static bool old_state = false;
+    if (connected == old_state) {
+        return;
+    }
+    old_state = connected;
+    
+    // Show/hide BLE icon based on connection status
+    if (connected) {
+        lv_obj_clear_flag(guider_ui.dashboard_ble_connected_img, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(guider_ui.dashboard_ble_connected_img, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+void update_esc_connection_status(bool connected)
+{
+    static bool old_state = true;
+    static uint32_t last_blink_time = 0;
+    static bool blink_state = false;
+    
+    // Handle connection state change
+    if (connected != old_state) {
+        old_state = connected;
+        if (connected) {
+            // ESC connected - hide warning text
+            lv_obj_add_flag(guider_ui.dashboard_esc_not_connected_text, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            // ESC disconnected - show warning text (will start blinking)
+            lv_obj_clear_flag(guider_ui.dashboard_esc_not_connected_text, LV_OBJ_FLAG_HIDDEN);
+            blink_state = true;
+        }
+    }
+    
+    // Blink warning text if ESC is not connected
+    if (!connected) {
+        uint32_t now = lv_tick_get();
+        
+        // Toggle visibility every 500ms
+        if (now - last_blink_time >= 500) {
+            last_blink_time = now;
+            blink_state = !blink_state;
+            
+            if (blink_state) {
+                lv_obj_clear_flag(guider_ui.dashboard_esc_not_connected_text, LV_OBJ_FLAG_HIDDEN);
+            } else {
+                lv_obj_add_flag(guider_ui.dashboard_esc_not_connected_text, LV_OBJ_FLAG_HIDDEN);
+            }
+        }
+    }
 }

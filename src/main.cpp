@@ -47,7 +47,7 @@
 void setup()
 {
   Serial.begin(115200);
-  delay(5000);
+  //delay(5000);
   LOG_INFO(SYSTEM, "VESC Display Starting...");
   
   // Initialize display and backlight first

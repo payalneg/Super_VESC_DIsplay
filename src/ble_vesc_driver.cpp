@@ -5,6 +5,8 @@
 #include "vesc_handler.h"
 #include "debug_log.h"
 #include "settings.h"
+#include "vesc_rt_data.h"
+
 // BLE Configuration variables
 int MTU_SIZE = 23;
 int PACKET_SIZE = MTU_SIZE - 3;
@@ -649,7 +651,7 @@ void BLE_OnCANResponse(uint8_t* data, unsigned int len) {
   if (!waiting_for_can_response || !deviceConnected || !pCharacteristicVescTx) {
     return;
   }
-  
+  vesc_rt_data_set_rx_time();
   LOG_DEBUG(BLE, "📦 CAN→BLE: Received CAN response (%d bytes), forwarding to BLE", len);
   
   // Forward the response to BLE with framing

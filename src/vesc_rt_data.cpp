@@ -98,6 +98,12 @@ void vesc_rt_data_request(void) {
 	comm_can_send_buffer(target_vesc_id, send_buffer, ind, 0);
 }
 
+void vesc_rt_data_set_rx_time(void)
+{
+	rt_data.rx_time = millis();
+	data_received = true;
+}
+
 void vesc_rt_data_process_response(unsigned char *data, unsigned int len) {
 	if (len < 1) return;
 	
@@ -192,8 +198,8 @@ void vesc_rt_data_process_response(unsigned char *data, unsigned int len) {
 	}
 	
 	// Update timestamp
-	rt_data.rx_time = millis();
-	data_received = true;
+	vesc_rt_data_set_rx_time();
+	
 	
 	// Log parsed data
 	static uint32_t log_counter = 0;

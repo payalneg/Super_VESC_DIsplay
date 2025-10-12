@@ -8,6 +8,7 @@
 #include "ui_updater.h"
 #include "vesc_rt_data.h"
 #include "debug_log.h"
+#include "ble_vesc_driver.h"
 #include <Arduino.h>
 
 // Include LVGL and custom UI functions
@@ -114,6 +115,17 @@ void ui_updater_update(void) {
 	
 	// Odometer (km)
 	update_odometer(rt->odometer/1000.0f);
+	
+	// Uptime (ms)
+	update_uptime(rt->uptime_ms);
+	
+	// BLE connection status
+	bool ble_connected = BLE_IsConnected();
+	update_ble_status(ble_connected);
+	
+	// ESC connection status (check if RT data is fresh)
+	bool esc_connected = vesc_rt_data_is_fresh();
+	update_esc_connection_status(esc_connected);
 	
 	// Debug log every 1 second (20 updates = 1 second at 50ms interval)
 	static uint32_t update_counter = 0;

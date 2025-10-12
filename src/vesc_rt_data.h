@@ -40,5 +40,8 @@ float vesc_rt_data_get_efficiency_whkm(void); // Wh/km consumption
 // Call this periodically from main loop (handles automatic requests)
 void vesc_rt_data_loop(void);
 
+// Set RX time
+void vesc_rt_data_set_rx_time(void);
+
 #endif /* VESC_RT_DATA_H_ */
 

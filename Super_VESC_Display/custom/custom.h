@@ -34,7 +34,9 @@ void update_battery_temp(float battery_temp);
 void update_battery_voltage(float battery_voltage);
 void update_odometer(float odometer);
 void update_fps(int fps);
-
+void update_uptime(uint32_t uptime);
+void update_ble_status(bool connected);
+void update_esc_connection_status(bool connected);
 #ifdef __cplusplus
 }
 #endif

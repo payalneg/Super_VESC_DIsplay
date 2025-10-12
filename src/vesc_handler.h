@@ -34,4 +34,5 @@ typedef void (*vesc_response_callback_t)(uint8_t *data, unsigned int len);
 // Set response callback (for BLE or other interfaces)
 void vesc_handler_set_response_callback(vesc_response_callback_t callback);
 
+
 #endif /* VESC_HANDLER_H_ */
