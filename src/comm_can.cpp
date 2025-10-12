@@ -42,7 +42,7 @@ static can_status_msg_6 stat_msgs_6[CAN_STATUS_MSGS_TO_STORE];
 #define RX_BUFFER_SIZE				512
 #define RXBUF_LEN					50
 
-static twai_timing_config_t t_config = TWAI_TIMING_CONFIG_1MBITS();
+static twai_timing_config_t t_config = TWAI_TIMING_CONFIG_250KBITS();  // Will be set during init
 static const twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
 static twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(GPIO_NUM_6, GPIO_NUM_0, TWAI_MODE_NORMAL);
 
@@ -432,7 +432,7 @@ void process_task(void *arg) {
 	vTaskDelete(NULL);
 }
 
-void comm_can_start(int pin_tx, int pin_rx, uint8_t controller_id) {
+void comm_can_start(int pin_tx, int pin_rx, uint8_t controller_id, int can_speed_kbps) {
 	// Initialize status message arrays
 	for (int i = 0;i < CAN_STATUS_MSGS_TO_STORE;i++) {
 		stat_msgs[i].id = -1;
@@ -450,7 +450,28 @@ void comm_can_start(int pin_tx, int pin_rx, uint8_t controller_id) {
 
 	// Store configuration
 	can_config.controller_id = controller_id;
-	can_config.can_baud_rate_kbps = 250;
+	can_config.can_baud_rate_kbps = can_speed_kbps;
+	
+	// Set CAN timing based on speed
+	switch (can_speed_kbps) {
+		case 125:
+			t_config = TWAI_TIMING_CONFIG_125KBITS();
+			break;
+		case 250:
+			t_config = TWAI_TIMING_CONFIG_250KBITS();
+			break;
+		case 500:
+			t_config = TWAI_TIMING_CONFIG_500KBITS();
+			break;
+		case 1000:
+			t_config = TWAI_TIMING_CONFIG_1MBITS();
+			break;
+		default:
+			LOG_WARN(CAN, "Invalid CAN speed %d kbps, using 250 kbps", can_speed_kbps);
+			t_config = TWAI_TIMING_CONFIG_250KBITS();
+			can_config.can_baud_rate_kbps = 250;
+			break;
+	}
 
 	if (!sem_init_done) {
 		ping_sem = xSemaphoreCreateBinary();
@@ -476,7 +497,7 @@ void comm_can_start(int pin_tx, int pin_rx, uint8_t controller_id) {
 
 	init_done = true;
 
-	LOG_INFO(CAN, "Initialized: TX=%d, RX=%d, ID=%d, Speed=250kbps", pin_tx, pin_rx, controller_id);
+	LOG_INFO(CAN, "Initialized: TX=%d, RX=%d, ID=%d, Speed=%d kbps", pin_tx, pin_rx, controller_id, can_config.can_baud_rate_kbps);
 }
 
 void comm_can_stop(void) {

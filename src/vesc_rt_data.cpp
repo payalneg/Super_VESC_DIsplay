@@ -102,7 +102,7 @@ void vesc_rt_data_request(void) {
 	
 	// Send to VESC via CAN
 	// send_type = 0: wait for response
-	comm_can_send_buffer(target_vesc_id, send_buffer, ind, 0);
+	comm_can_send_buffer(settings_get_target_vesc_id(), send_buffer, ind, 0);
 }
 
 void vesc_rt_data_set_rx_time(void)
