@@ -31,6 +31,9 @@ void update_temp_fet(float temp_fet);
 void update_temp_motor(float temp_motor);
 void update_amp_hours(float amp_hours);
 void update_battery_temp(float battery_temp);
+void update_battery_voltage(float battery_voltage);
+void update_odometer(float odometer);
+void update_fps(int fps);
 
 #ifdef __cplusplus
 }

@@ -35,8 +35,9 @@
 #define LOG_CAN_ENABLED     1
 #define LOG_BLE_ENABLED     1
 #define LOG_PACKET_ENABLED  1
-#define LOG_VESC_ENABLED    1
+#define LOG_VESC_ENABLED    0
 #define LOG_SYSTEM_ENABLED  1
+#define LOG_UI_ENABLED      1
 
 // ============================================================================
 // LOGGING MACROS - DO NOT MODIFY BELOW THIS LINE

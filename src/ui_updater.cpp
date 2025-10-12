@@ -1,0 +1,144 @@
+/*
+	Copyright 2025 Super VESC Display
+
+	UI Updater Module
+	Updates LVGL UI with real-time VESC data
+*/
+
+#include "ui_updater.h"
+#include "vesc_rt_data.h"
+#include "debug_log.h"
+#include <Arduino.h>
+
+// Include LVGL and custom UI functions
+extern "C" {
+	#include "lvgl.h"
+	#include "../../Super_VESC_Display/custom/custom.h"
+}
+
+// UI updater state
+static bool ui_updater_active = false;
+static uint32_t last_update_time = 0;
+static uint32_t update_interval_ms = 50; // Update every 50ms (20 Hz)
+
+// FPS counter
+static uint32_t fps_counter = 0;           // Count frames
+static uint32_t fps_last_time = 0;         // Last FPS calculation time
+static int current_fps = 0;                 // Current FPS value
+
+void ui_updater_init(void) {
+	ui_updater_active = false;
+	last_update_time = 0;
+	
+	LOG_INFO(UI, "UI updater initialized (manual mode)");
+}
+
+void ui_updater_set_zeros(void) {
+	// Initialize all UI elements with zero values
+	
+	update_speed(0.0f);           // Speed: 0 km/h
+	update_current(0.0f);          // Current: 0 A
+	update_battery_proc(0.0f);     // Battery: 0%
+	update_trip(0.0f);             // Trip: 0 km
+	update_range(0.0f);            // Range: 0 km
+	update_temp_fet(0.0f);         // Temp FET: 0°C
+	update_temp_motor(0.0f);       // Temp Motor: 0°C
+	update_amp_hours(0.0f);        // Amp hours: 0.0 Ah
+	update_battery_temp(0.0f);     // Battery temp: 0°C
+	update_battery_voltage(0.0f);       // Battery Voltage: 0 V
+	update_odometer(0.0f);       // Odometer: 0 km
+	update_fps(0);                 // FPS: 0
+
+	LOG_INFO(UI, "UI initialized with zero values");
+}
+
+void ui_updater_start(void) {
+	ui_updater_active = true;
+	last_update_time = 0; // Force immediate update
+	LOG_INFO(UI, "UI updates started");
+}
+
+void ui_updater_stop(void) {
+	ui_updater_active = false;
+	LOG_INFO(UI, "UI updates stopped");
+}
+
+void ui_updater_update(void) {
+	if (!ui_updater_active) return;
+	
+	// Check if enough time has passed (50ms interval)
+	uint32_t now = millis();
+	if (now - last_update_time < update_interval_ms) {
+		return; // Too early, skip update
+	}
+	last_update_time = now;
+	
+	// Get latest RT data
+	const vesc_setup_values_t* rt = vesc_rt_data_get_latest();
+	
+	// Update UI with RT data
+	
+	// Speed (km/h)
+	float speed_kmh = vesc_rt_data_get_speed_kmh();
+	update_speed(speed_kmh);
+	
+	// Current (A) - positive = discharge, negative = regen
+	update_current(rt->current_in);
+	
+	// Battery level (0-100%)
+	float battery_percent = rt->battery_level * 100.0f;
+	update_battery_proc(battery_percent);
+	
+	// Trip distance (km)
+	float trip_km = vesc_rt_data_get_trip_km();
+	update_trip(trip_km);
+	
+	// Range (km)
+	float range_km = vesc_rt_data_get_range_km();
+	update_range(range_km);
+	
+	// Temperature MOSFET (°C)
+	update_temp_fet(rt->temp_mos);
+	
+	// Temperature Motor (°C)
+	update_temp_motor(rt->temp_motor);
+	
+	// Amp hours consumed (Ah)
+	update_amp_hours(rt->amp_hours);
+	
+	// Battery temperature (if available) - for now use MOSFET temp
+	update_battery_temp(rt->temp_mos);
+	
+	// Battery voltage (V)
+	update_battery_voltage(rt->v_in);
+	
+	// Odometer (km)
+	update_odometer(rt->odometer/1000.0f);
+	
+	// Debug log every 1 second (20 updates = 1 second at 50ms interval)
+	static uint32_t update_counter = 0;
+	update_counter++;
+	if (update_counter >= 20) {
+		update_counter = 0;
+		LOG_DEBUG(UI, "UI: Speed=%.1f km/h | I=%.1fA | Bat=%.0f%% | V=%.1fV | Trip=%.2f km | Range=%.1f km | Odo=%.1f km | Temp:FET=%.0f°C/Mot=%.0f°C | Ah=%.1f", 
+		         speed_kmh, rt->current_in, battery_percent, rt->v_in, trip_km, range_km, 
+		         rt->odometer/1000.0f, rt->temp_mos, rt->temp_motor, rt->amp_hours);
+	}
+}
+
+void ui_updater_update_fps(void) {
+	// FPS counter - count every frame
+	fps_counter++;
+	
+	// Calculate and update FPS every second
+	uint32_t now = millis();
+	if (now - fps_last_time >= 1000) {
+		current_fps = fps_counter;
+		update_fps(current_fps);
+		
+		LOG_DEBUG(UI, "FPS: %d", current_fps);
+		
+		fps_counter = 0;
+		fps_last_time = now;
+	}
+}

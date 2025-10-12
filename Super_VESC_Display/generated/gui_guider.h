@@ -72,6 +72,7 @@ typedef struct
 	lv_obj_t *dashboard_slider_1;
 	lv_obj_t *dashboard_slider_2;
 	lv_obj_t *dashboard_slider_3;
+	lv_obj_t *dashboard_fps_text;
 }lv_ui;
 
 typedef void (*ui_setup_scr_t)(lv_ui * ui);

@@ -125,25 +125,21 @@ void update_battery_proc(float battery_proc)
     lv_meter_set_indicator_start_value(guider_ui.dashboard_Battery_meter, guider_ui.dashboard_Battery_meter_scale_0_arc_1, 100-value);
     
     char text[10];
-    sprintf(text,"%d", value);
+    sprintf(text,"%d", value>99?99:value);
     lv_textarea_set_text(guider_ui.dashboard_Battery_proc_text,text);
 }
 
 void update_trip(float trip_distance)
 {
-    int value = trip_distance;
-    
     char text[10];
-    sprintf(text,"%d", value);
+    sprintf(text,"%0.1f", trip_distance);
     lv_textarea_set_text(guider_ui.dashboard_TRIP_text,text);
 }
 
 void update_range(float range_distance)
 {
-    int value = range_distance;
-    
     char text[10];
-    sprintf(text,"%d", value);
+    sprintf(text,"%.1f", range_distance);
     lv_textarea_set_text(guider_ui.dashboard_Range_text,text);
 }
 
@@ -177,4 +173,29 @@ void update_battery_temp(float battery_temp)
     sprintf(text,"%d", value);
 
     lv_textarea_set_text(guider_ui.dashboard_temp_bat_text,text);
+}
+
+void update_battery_voltage(float battery_voltage)
+{
+    char text[10];
+    sprintf(text,"%.1f", battery_voltage);
+
+    lv_textarea_set_text(guider_ui.dashboard_Voltage_text,text);
+}
+
+
+void update_odometer(float odometer)
+{
+    int value = odometer;   
+    char text[10];
+    sprintf(text,"%05d", value);
+
+    lv_textarea_set_text(guider_ui.dashboard_odo_text,text);
+}
+
+void update_fps(int fps)
+{
+    char text[10];
+    sprintf(text,"%d", fps);
+    lv_textarea_set_text(guider_ui.dashboard_fps_text,text);
 }

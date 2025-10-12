@@ -385,7 +385,7 @@ void setup_scr_dashboard(lv_ui *ui)
 #if LV_USE_KEYBOARD != 0 || LV_USE_ZH_KEYBOARD != 0
     lv_obj_add_event_cb(ui->dashboard_Battery_proc_text, ta_event_cb, LV_EVENT_ALL, ui->g_kb_top_layer);
 #endif
-    lv_obj_set_pos(ui->dashboard_Battery_proc_text, 357, 178);
+    lv_obj_set_pos(ui->dashboard_Battery_proc_text, 357, 166);
     lv_obj_set_size(ui->dashboard_Battery_proc_text, 107, 51);
 
     //Write style for dashboard_Battery_proc_text, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
@@ -604,7 +604,7 @@ void setup_scr_dashboard(lv_ui *ui)
 #if LV_USE_KEYBOARD != 0 || LV_USE_ZH_KEYBOARD != 0
     lv_obj_add_event_cb(ui->dashboard_ta_7, ta_event_cb, LV_EVENT_ALL, ui->g_kb_top_layer);
 #endif
-    lv_obj_set_pos(ui->dashboard_ta_7, 376, 176);
+    lv_obj_set_pos(ui->dashboard_ta_7, 376, 164);
     lv_obj_set_size(ui->dashboard_ta_7, 103, 47);
 
     //Write style for dashboard_ta_7, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
@@ -1179,8 +1179,9 @@ void setup_scr_dashboard(lv_ui *ui)
 #if LV_USE_KEYBOARD != 0 || LV_USE_ZH_KEYBOARD != 0
     lv_obj_add_event_cb(ui->dashboard_ta_23, ta_event_cb, LV_EVENT_ALL, ui->g_kb_top_layer);
 #endif
-    lv_obj_set_pos(ui->dashboard_ta_23, 377, 156);
+    lv_obj_set_pos(ui->dashboard_ta_23, 377, 152);
     lv_obj_set_size(ui->dashboard_ta_23, 103, 47);
+    lv_obj_add_flag(ui->dashboard_ta_23, LV_OBJ_FLAG_HIDDEN);
 
     //Write style for dashboard_ta_23, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
     lv_obj_set_style_text_color(ui->dashboard_ta_23, lv_color_hex(0x8e97a6), LV_PART_MAIN|LV_STATE_DEFAULT);
@@ -1214,8 +1215,9 @@ void setup_scr_dashboard(lv_ui *ui)
 #if LV_USE_KEYBOARD != 0 || LV_USE_ZH_KEYBOARD != 0
     lv_obj_add_event_cb(ui->dashboard_temp_bat_text, ta_event_cb, LV_EVENT_ALL, ui->g_kb_top_layer);
 #endif
-    lv_obj_set_pos(ui->dashboard_temp_bat_text, 357, 156);
+    lv_obj_set_pos(ui->dashboard_temp_bat_text, 357, 152);
     lv_obj_set_size(ui->dashboard_temp_bat_text, 107, 51);
+    lv_obj_add_flag(ui->dashboard_temp_bat_text, LV_OBJ_FLAG_HIDDEN);
 
     //Write style for dashboard_temp_bat_text, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
     lv_obj_set_style_text_color(ui->dashboard_temp_bat_text, lv_color_hex(0xffffff), LV_PART_MAIN|LV_STATE_DEFAULT);
@@ -1362,6 +1364,41 @@ void setup_scr_dashboard(lv_ui *ui)
     lv_obj_set_style_bg_color(ui->dashboard_slider_3, lv_color_hex(0x2195f6), LV_PART_KNOB|LV_STATE_DEFAULT);
     lv_obj_set_style_bg_grad_dir(ui->dashboard_slider_3, LV_GRAD_DIR_NONE, LV_PART_KNOB|LV_STATE_DEFAULT);
     lv_obj_set_style_radius(ui->dashboard_slider_3, 8, LV_PART_KNOB|LV_STATE_DEFAULT);
+
+    //Write codes dashboard_fps_text
+    ui->dashboard_fps_text = lv_textarea_create(ui->dashboard);
+    lv_textarea_set_text(ui->dashboard_fps_text, "FPS");
+    lv_textarea_set_placeholder_text(ui->dashboard_fps_text, "");
+    lv_textarea_set_password_bullet(ui->dashboard_fps_text, "*");
+    lv_textarea_set_password_mode(ui->dashboard_fps_text, false);
+    lv_textarea_set_one_line(ui->dashboard_fps_text, false);
+    lv_textarea_set_accepted_chars(ui->dashboard_fps_text, "");
+    lv_textarea_set_max_length(ui->dashboard_fps_text, 32);
+#if LV_USE_KEYBOARD != 0 || LV_USE_ZH_KEYBOARD != 0
+    lv_obj_add_event_cb(ui->dashboard_fps_text, ta_event_cb, LV_EVENT_ALL, ui->g_kb_top_layer);
+#endif
+    lv_obj_set_pos(ui->dashboard_fps_text, 379, 445);
+    lv_obj_set_size(ui->dashboard_fps_text, 95, 31);
+
+    //Write style for dashboard_fps_text, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
+    lv_obj_set_style_text_color(ui->dashboard_fps_text, lv_color_hex(0xFFFFFF), LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui->dashboard_fps_text, &lv_font_montserratMedium_12, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui->dashboard_fps_text, 255, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_letter_space(ui->dashboard_fps_text, 2, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_align(ui->dashboard_fps_text, LV_TEXT_ALIGN_RIGHT, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui->dashboard_fps_text, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(ui->dashboard_fps_text, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_width(ui->dashboard_fps_text, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_top(ui->dashboard_fps_text, 4, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_right(ui->dashboard_fps_text, 4, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_left(ui->dashboard_fps_text, 4, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(ui->dashboard_fps_text, 4, LV_PART_MAIN|LV_STATE_DEFAULT);
+
+    //Write style for dashboard_fps_text, Part: LV_PART_SCROLLBAR, State: LV_STATE_DEFAULT.
+    lv_obj_set_style_bg_opa(ui->dashboard_fps_text, 255, LV_PART_SCROLLBAR|LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui->dashboard_fps_text, lv_color_hex(0x2195f6), LV_PART_SCROLLBAR|LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_grad_dir(ui->dashboard_fps_text, LV_GRAD_DIR_NONE, LV_PART_SCROLLBAR|LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(ui->dashboard_fps_text, 0, LV_PART_SCROLLBAR|LV_STATE_DEFAULT);
 
     //The custom code of dashboard.
 

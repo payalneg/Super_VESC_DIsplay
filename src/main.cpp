@@ -40,31 +40,10 @@
 #include "buffer.h"                  // Buffer utility functions
 #include "datatypes.h"               // VESC data types
 #include "vesc_handler.h"            // VESC command handler
+#include "vesc_rt_data.h"            // RT data module
+#include "ui_updater.h"              // UI updater module
 #include "debug_log.h"               // Logging system
 
-void DriverTask(void *parameter) {
-  LOG_INFO(SYSTEM, "🚀 DriverTask started");
-  LOG_INFO(SYSTEM, "🔧 BLE Mode: %s", ble_config_get_mode_name(ble_config_get_mode()));
-  LOG_INFO(SYSTEM, "📋 Description: %s", ble_config_get_mode_desc(ble_config_get_mode()));
-  LOG_INFO(SYSTEM, "📡 CAN Bus: TX=GPIO6, RX=GPIO0, Speed=250kbps, Device ID=%d\n", CONF_CONTROLLER_ID);
-  
-  while(1){
-    BLE_Loop();       // Process BLE communication
-    
-    vTaskDelay(pdMS_TO_TICKS(100));  // Update every 100ms
-  }
-}
-void Driver_Loop() {
-  xTaskCreatePinnedToCore(
-    DriverTask,           
-    "DriverTask",         
-    4096,                 
-    NULL,                 
-    3,                    
-    NULL,                 
-    0                     
-  );  
-}
 void setup()
 {
   Serial.begin(115200);
@@ -93,22 +72,21 @@ void setup()
   uint8_t vesc_can_id = CONF_CONTROLLER_ID;
   comm_can_start(GPIO_NUM_6, GPIO_NUM_0, vesc_can_id);
   
-  // Set CAN packet handler based on current mode
-  if (ble_config_get_mode() == BLE_MODE_BRIDGE) {
-    // ============================================================================
-    // BLE-CAN Bridge Mode: Forward CAN responses to BLE
-    // ============================================================================
-    auto packet_handler_wrapper = [](unsigned char *data, unsigned int len) {
-      // Forward CAN responses to BLE
-      BLE_OnCANResponse(data, len);
-    };
-    comm_can_set_packet_handler(packet_handler_wrapper);
-  } else {
-    // ============================================================================
-    // Direct Mode: Process CAN messages locally
-    // ============================================================================
-    comm_can_set_packet_handler(vesc_handler_process_command);
-  }
+  // Initialize RT data module
+  vesc_rt_data_init();
+  
+  // Set CAN packet handler for Bridge mode
+  // ============================================================================
+  // BLE-CAN Bridge Mode: Forward CAN responses to BLE + Process RT data
+  // ============================================================================
+  auto packet_handler_wrapper = [](unsigned char *data, unsigned int len) {
+    // Process RT data responses
+    vesc_rt_data_process_response(data, len);
+    
+    // Forward CAN responses to BLE
+    BLE_OnCANResponse(data, len);
+  };
+  comm_can_set_packet_handler(packet_handler_wrapper);
   
   LOG_RAW("\n╔════════════════════════════════════════════════╗\n");
   LOG_RAW("║      🚀 CAN Communication Started 🚀          ║\n");
@@ -122,18 +100,11 @@ void setup()
   LOG_RAW("║ RX Pin:             GPIO 0                    ║\n");
   LOG_RAW("╠════════════════════════════════════════════════╣\n");
   
-  // Display mode-specific info based on current runtime mode
-  if (ble_config_get_mode() == BLE_MODE_BRIDGE) {
-    LOG_RAW("║ 🌉 BLE Mode:        BRIDGE (vesc_express)     ║\n");
-    LOG_RAW("║ 📱 BLE Device:      SuperVESCDisplay          ║\n");
-    LOG_RAW("║ 📋 Local Commands:  ENABLED (ID=2)            ║\n");
-    LOG_RAW("║ 🔄 CAN Forwarding:  ENABLED (all other IDs)   ║\n");
-  } else {
-    LOG_RAW("║ 🌉 BLE Mode:        DIRECT (standalone)       ║\n");
-    LOG_RAW("║ 📱 BLE Device:      SuperVESCDisplay          ║\n");
-    LOG_RAW("║ 📋 Local Commands:  ALL commands processed    ║\n");
-    LOG_RAW("║ 🔄 CAN Forwarding:  DISABLED                  ║\n");
-  }
+  // Display BLE Bridge mode info
+  LOG_RAW("║ 🌉 BLE Mode:        BRIDGE (vesc_express)     ║\n");
+  LOG_RAW("║ 📱 BLE Device:      SuperVESCDisplay          ║\n");
+  LOG_RAW("║ 📋 Local Commands:  ENABLED (ID=2)            ║\n");
+  LOG_RAW("║ 🔄 CAN Forwarding:  ENABLED (all other IDs)   ║\n");
   
   LOG_RAW("╚════════════════════════════════════════════════╝\n");
   LOG_RAW("\n⏳ Waiting for BLE/CAN messages...\n\n");
@@ -149,16 +120,33 @@ void setup()
     LOG_ERROR(SYSTEM, "BLE initialization failed");
   }
   
-  // Initialize LVGL with dashboard
+  // Initialize LVGL with dashboard (creates UI elements)
   Lvgl_Init();
+  
+  // Set all UI elements to zero (before any updates start)
+  ui_updater_set_zeros();
+  
+  // Initialize UI updater timer
+  ui_updater_init();
+  
+  // Start RT data requests
+  vesc_rt_data_start();
+  LOG_INFO(SYSTEM, "RT data requests started");
+  
+  // Start UI automatic updates
+  ui_updater_start();
+  LOG_INFO(SYSTEM, "UI updates started");
 
   // Start the VESC display and communication task
   LOG_INFO(SYSTEM, "VESC Display Ready!");
-  Driver_Loop();
 }
 
 void loop()
 {
+  BLE_Loop();              // Process BLE communication
+  vesc_rt_data_loop();     // Process RT data requests
+  ui_updater_update();     // Update UI with VESC data (checks 50ms interval internally)
+  ui_updater_update_fps(); // Update FPS counter independently
   Lvgl_Loop();
   //Serial.println("LVGL loop");
   //Touch_Loop();  // Process touch interrupts

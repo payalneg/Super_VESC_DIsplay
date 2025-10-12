@@ -205,7 +205,9 @@ typedef enum {
 	COMM_SET_HANDBRAKE						= 10,
 	COMM_SET_DETECT							= 11,
 	COMM_SET_SERVO_POS						= 12,
+	COMM_GET_VALUES_SETUP					= 47,
 	COMM_GET_VALUES_SELECTIVE				= 50,
+	COMM_GET_VALUES_SETUP_SELECTIVE			= 51,
 	COMM_ERASE_BOOTLOADER					= 73,
 	COMM_WRITE_NEW_APP_DATA_LZO				= 81,
 	COMM_SET_CURRENT_REL					= 84,
@@ -219,6 +221,8 @@ typedef enum {
 	// BMS commands
 	COMM_BMS_GET_VALUES						= 96,
 	
+	COMM_SET_ODOMETER						= 110,
+	
 	// Power switch commands
 	COMM_PSW_GET_STATUS						= 111,
 	COMM_PSW_SWITCH							= 112,
@@ -227,6 +231,8 @@ typedef enum {
 	COMM_IO_BOARD_GET_ALL					= 122,
 	COMM_IO_BOARD_SET_PWM					= 123,
 	COMM_IO_BOARD_SET_DIGITAL				= 124,
+	
+	COMM_GET_STATS							= 128,
 } COMM_PACKET_ID;
 
 // Packet settings
@@ -256,5 +262,32 @@ typedef struct {
 
 // Config signature constant (must match VESC Tool expectations)
 #define MAIN_CONFIG_T_SIGNATURE 1954583966
+
+// VESC RT Data Structure (SETUP_VALUES)
+typedef struct {
+	float temp_mos;
+	float temp_motor;
+	float current_motor;
+	float current_in;
+	float duty_now;
+	float rpm;
+	float speed;                // m/s
+	float v_in;
+	float battery_level;        // 0-1
+	float amp_hours;
+	float amp_hours_charged;
+	float watt_hours;
+	float watt_hours_charged;
+	float tachometer;           // meters (signed)
+	float tachometer_abs;       // meters (trip)
+	float position;
+	uint8_t fault_code;
+	uint8_t vesc_id;
+	uint8_t num_vescs;
+	float battery_wh;           // battery capacity in Wh
+	uint32_t odometer;          // meters
+	uint32_t uptime_ms;         // milliseconds
+	uint32_t rx_time;           // Reception timestamp
+} vesc_setup_values_t;
 
 #endif /* DATATYPES_H_ */

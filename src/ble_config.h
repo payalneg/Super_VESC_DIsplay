@@ -13,17 +13,16 @@ extern "C" {
 #endif
 
 // ============================================================================
-// BLE Operating Mode Configuration (Runtime)
+// BLE Operating Mode Configuration
 // ============================================================================
 
-// BLE operating modes
+// BLE operating mode (Bridge mode only)
 typedef enum {
-  BLE_MODE_BRIDGE = 0,  // BLE-CAN Bridge (like vesc_express)
-  BLE_MODE_DIRECT = 1   // Direct Processing (standalone device)
+  BLE_MODE_BRIDGE = 0  // BLE-CAN Bridge (like vesc_express)
 } ble_mode_t;
 
 // ============================================================================
-// Mode Descriptions
+// Mode Description
 // ============================================================================
 
 /*
@@ -34,29 +33,15 @@ typedef enum {
  * - Compatible with VESC Tool and official mobile apps
  */
 
-/*
- * BLE_MODE_DIRECT - Direct Processing Mode:
- * - Mobile app → BLE → Parse → Local vesc_handler
- * - Responses generated locally → BLE → Mobile app
- * - All commands handled by this device
- * - No CAN forwarding (device acts as standalone VESC)
- */
-
 // ============================================================================
 // Configuration API
 // ============================================================================
 
 /**
  * Get current BLE operating mode
- * @return Current mode (BLE_MODE_BRIDGE or BLE_MODE_DIRECT)
+ * @return Current mode (always BLE_MODE_BRIDGE)
  */
 ble_mode_t ble_config_get_mode(void);
-
-/**
- * Set BLE operating mode
- * @param mode New mode to set
- */
-void ble_config_set_mode(ble_mode_t mode);
 
 /**
  * Get mode name string
