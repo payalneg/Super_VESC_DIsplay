@@ -34,7 +34,7 @@ typedef struct {
 } can_config_t;
 
 // Functions
-void comm_can_start(int pin_tx, int pin_rx, uint8_t controller_id);
+void comm_can_start(int pin_tx, int pin_rx, uint8_t controller_id, int can_speed_kbps);
 void comm_can_stop(void);
 void comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len);
 void comm_can_send_buffer(uint8_t controller_id, uint8_t *data, unsigned int len, uint8_t send);

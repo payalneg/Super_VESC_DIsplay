@@ -43,6 +43,7 @@
 #include "vesc_rt_data.h"            // RT data module
 #include "ui_updater.h"              // UI updater module
 #include "debug_log.h"               // Logging system
+#include "settings.h"                // Settings system
 
 void setup()
 {
@@ -50,9 +51,16 @@ void setup()
   //delay(5000);
   LOG_INFO(SYSTEM, "VESC Display Starting...");
   
-  // Initialize display and backlight first
+  // Initialize settings system first (loads from NVS)
+  settings_init();
+  
+  // Initialize display and backlight
   Backlight_Init();
   LCD_Init();
+  
+  // Apply saved brightness setting
+  settings_apply_brightness();
+  LOG_INFO(SYSTEM, "Screen brightness set to %d%%", settings_get_screen_brightness());
   
   // Initialize touch screen (it will initialize its own I2C)
   if (Touch_Init()) {
@@ -68,11 +76,12 @@ void setup()
   // Initialize VESC handler
   vesc_handler_init();
   
-  // Initialize CAN communication
-  uint8_t vesc_can_id = CONF_CONTROLLER_ID;
-  comm_can_start(GPIO_NUM_6, GPIO_NUM_0, vesc_can_id);
+  // Initialize CAN communication with settings
+  uint8_t vesc_can_id = settings_get_controller_id();
+  int can_speed = (int)settings_get_can_speed();
+  comm_can_start(GPIO_NUM_6, GPIO_NUM_0, vesc_can_id, can_speed);
   
-  // Initialize RT data module
+  // Initialize RT data module with target VESC ID from settings
   vesc_rt_data_init();
   
   // Set CAN packet handler for Bridge mode
@@ -94,8 +103,10 @@ void setup()
   LOG_RAW("║ Hardware:           %-25s ║\n", HW_NAME);
   LOG_RAW("║ Firmware:           v%d.%02d                     ║\n", FW_VERSION_MAJOR, FW_VERSION_MINOR);
   LOG_RAW("║ Device CAN ID:      %3d                       ║\n", vesc_can_id);
+  LOG_RAW("║ Target VESC ID:     %3d                       ║\n", settings_get_target_vesc_id());
   LOG_RAW("║ Device Type:        HW_TYPE_CUSTOM_MODULE     ║\n");
-  LOG_RAW("║ CAN Speed:          250 kbps                  ║\n");
+  LOG_RAW("║ CAN Speed:          %4d kbps                 ║\n", can_speed);
+  LOG_RAW("║ Screen Brightness:  %3d%%                      ║\n", settings_get_screen_brightness());
   LOG_RAW("║ TX Pin:             GPIO 6                    ║\n");
   LOG_RAW("║ RX Pin:             GPIO 0                    ║\n");
   LOG_RAW("╠════════════════════════════════════════════════╣\n");
@@ -103,7 +114,7 @@ void setup()
   // Display BLE Bridge mode info
   LOG_RAW("║ 🌉 BLE Mode:        BRIDGE (vesc_express)     ║\n");
   LOG_RAW("║ 📱 BLE Device:      SuperVESCDisplay          ║\n");
-  LOG_RAW("║ 📋 Local Commands:  ENABLED (ID=2)            ║\n");
+  LOG_RAW("║ 📋 Local Commands:  ENABLED (ID=%d)            ║\n", vesc_can_id);
   LOG_RAW("║ 🔄 CAN Forwarding:  ENABLED (all other IDs)   ║\n");
   
   LOG_RAW("╚════════════════════════════════════════════════╝\n");

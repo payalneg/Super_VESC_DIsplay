@@ -5,6 +5,7 @@
 #include "vesc_handler.h"
 #include "debug_log.h"
 #include "settings.h"
+#include "settings_ble_commands.h"
 #include "vesc_rt_data.h"
 #include "datatypes.h"
 
@@ -101,12 +102,12 @@ void BLE_OnPacketParsed(uint8_t* data, uint16_t len) {
   // - PROCESS_RX_BUFFER / PROCESS_SHORT_BUFFER wrapping
   
   waiting_for_can_response = true;
-  expected_response_vesc_id = target_vesc_id;
+  expected_response_vesc_id = settings_get_target_vesc_id();
   
   LOG_DEBUG(BLE, "🔄 BLE→CAN: Forwarding to CAN bus (broadcast to all VESCs)");
   
   // send_type = 0: commands_send (wait for response and send it back)
-  comm_can_send_buffer(target_vesc_id, data, len, 0);
+  comm_can_send_buffer(settings_get_target_vesc_id(), data, len, 0);
 }
 
 // BLE Characteristic Callbacks Implementation
@@ -501,7 +502,18 @@ void BLE_ProcessReceivedData() {
         uint8_t get_cmd = 0x04; // COMM_GET_VALUES
         BLE_QueueCommand(&get_cmd, 1, 255, 0);
       } else {
-        LOG_WARN(BLE, "Unknown text command: %s", command.c_str());
+        // Try processing as settings command
+        char response[256];
+        if (process_settings_command(command.c_str(), response, sizeof(response))) {
+          LOG_INFO(BLE, "⚙️ Settings command: %s", command.c_str());
+          // Send response back via BLE
+          if (pCharacteristicVescTx) {
+            pCharacteristicVescTx->setValue(response);
+            pCharacteristicVescTx->notify();
+          }
+        } else {
+          LOG_WARN(BLE, "Unknown text command: %s", command.c_str());
+        }
       }
     }
     
