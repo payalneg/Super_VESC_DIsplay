@@ -1,5 +1,6 @@
 {
     "files.associations": {
-        "lv_demo_music.h": "c"
+        "lv_demo_music.h": "c",
+        "settings.h": "c"
     }
 }

@@ -4,7 +4,7 @@
 	Global settings and configuration with NVS storage
 */
 
-#include "settings.h"
+#include "dev_settings.h"
 #include "Display_ST7701.h"
 #include "comm_can.h"
 #include "debug_log.h"

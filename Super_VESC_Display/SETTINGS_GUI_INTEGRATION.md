@@ -130,8 +130,8 @@ Super_VESC_Display/
 │   └── ...
 │
 └── src/
-    ├── settings.cpp          ← Device settings backend
-    └── settings.h            ← Settings API
+    ├── dev_settings.cpp          ← Device settings backend
+    └── dev_settings.h            ← Settings API
 ```
 
 ## Summary

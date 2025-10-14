@@ -11,7 +11,7 @@
 #include "debug_log.h"
 #include <Arduino.h>
 #include <string.h>
-#include "settings.h"
+#include "dev_settings.h"
 
 // Range calculation mode:
 // 0 = VESC Tool original (uses full battery_wh capacity - shows range for full battery)

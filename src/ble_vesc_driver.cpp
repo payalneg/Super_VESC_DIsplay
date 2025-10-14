@@ -4,7 +4,7 @@
 #include "packet_parser.h"
 #include "vesc_handler.h"
 #include "debug_log.h"
-#include "settings.h"
+#include "dev_settings.h"
 #include "settings_ble_commands.h"
 #include "vesc_rt_data.h"
 #include "datatypes.h"

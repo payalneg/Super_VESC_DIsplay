@@ -8,16 +8,12 @@
 #include "lv_conf.h"
 
 // Determine if we're running in simulator using LVGL's flag
-#ifndef LV_USE_GUIDER_SIMULATOR
-    #define LV_USE_GUIDER_SIMULATOR 0
-#endif
-
-#if LV_USE_GUIDER_SIMULATOR
+#ifndef LV_REALDEVICE
     #define SIMULATOR_MODE 1
 #else
     #define SIMULATOR_MODE 0
     // On device - include real settings
-    #include "settings.h"
+    #include "dev_settings.h"
 #endif
 
 // Simulator-mode storage
@@ -54,8 +50,8 @@ uint8_t settings_wrapper_get_can_speed_index(void) {
     return sim_settings.can_speed_index;
 #else
     // Convert kbps to index
-    can_speed_t speed = settings_get_can_speed();
-    switch ((int)speed) {
+    int speed = (int)settings_get_can_speed();
+    switch (speed) {
         case 125: return 0;
         case 250: return 1;
         case 500: return 2;
@@ -94,7 +90,7 @@ void settings_wrapper_set_can_speed_index(uint8_t index) {
     sim_settings.can_speed_index = index;
 #else
     // Convert index to speed
-    can_speed_t speed;
+    int speed;
     switch (index) {
         case 0: speed = CAN_SPEED_125_KBPS; break;
         case 1: speed = CAN_SPEED_250_KBPS; break;

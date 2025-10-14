@@ -43,59 +43,33 @@
 #include "vesc_rt_data.h"            // RT data module
 #include "ui_updater.h"              // UI updater module
 #include "debug_log.h"               // Logging system
-#include "settings.h"                // Settings system
+#include "dev_settings.h"                // Settings system
 
 // Brightness monitoring variables
-static uint32_t last_brightness_check = 0;
-static uint32_t brightness_check_interval = 1000; // Check every 1 second
-static uint8_t current_brightness = 0;
-static bool brightness_changed = false;
+static uint8_t last_brightness = 0;
+static unsigned long last_brightness_check = 0;
+#define BRIGHTNESS_CHECK_INTERVAL_MS 1000  // Check brightness changes every 1 second
 
-// Brightness monitoring functions
-void brightness_monitor_init(void) {
-    current_brightness = settings_get_screen_brightness();
-    LOG_INFO(SYSTEM, "Brightness monitoring initialized at %d%%", current_brightness);
-}
-
-void brightness_monitor_update(void) {
-    uint32_t current_time = millis();
+// Function to check for brightness changes and apply them
+void check_brightness_changes(void) {
+  unsigned long current_time = millis();
+  
+  // Check brightness changes every BRIGHTNESS_CHECK_INTERVAL_MS
+  //if (current_time - last_brightness_check >= BRIGHTNESS_CHECK_INTERVAL_MS) {
+    uint8_t current_brightness = settings_get_screen_brightness();
     
-    // Check if it's time to update brightness monitoring
-    if (current_time - last_brightness_check >= brightness_check_interval) {
-        last_brightness_check = current_time;
-        
-        // Here you can add logic to detect external brightness changes
-        // For example, reading from a light sensor, BLE commands, etc.
-        // For now, we'll just check if settings have changed
-        
-        uint8_t new_brightness = settings_get_screen_brightness();
-        if (new_brightness != current_brightness) {
-            current_brightness = new_brightness;
-            brightness_changed = true;
-            LOG_INFO(SYSTEM, "Brightness changed to %d%%", current_brightness);
-        }
-    }
-}
-
-void brightness_apply_if_changed(void) {
-    if (brightness_changed) {
-        settings_apply_brightness();
-        brightness_changed = false;
-        LOG_INFO(SYSTEM, "Applied brightness change to %d%%", current_brightness);
-    }
-}
-
-// Function to set brightness from external sources (BLE, CAN, etc.)
-void brightness_set_external(uint8_t brightness) {
-    if (brightness > 100) {
-        LOG_WARN(SYSTEM, "Invalid brightness %d (must be 0-100)", brightness);
-        return;
+    if (current_brightness != last_brightness) {
+      LOG_INFO(SYSTEM, "Brightness changed from %d%% to %d%%", last_brightness, current_brightness);
+      
+      // Apply the new brightness setting
+      settings_apply_brightness();
+      
+      // Update the last known brightness
+      last_brightness = current_brightness;
     }
     
-    settings_set_screen_brightness(brightness);
-    current_brightness = brightness;
-    brightness_changed = true;
-    LOG_INFO(SYSTEM, "External brightness change to %d%%", brightness);
+    last_brightness_check = current_time;
+  //}
 }
 
 void setup()
@@ -113,6 +87,7 @@ void setup()
   
   // Apply saved brightness setting
   settings_apply_brightness();
+  last_brightness = settings_get_screen_brightness();  // Initialize brightness monitoring
   LOG_INFO(SYSTEM, "Screen brightness set to %d%%", settings_get_screen_brightness());
   
   // Initialize touch screen (it will initialize its own I2C)
@@ -211,6 +186,7 @@ void loop()
   vesc_rt_data_loop();     // Process RT data requests
   ui_updater_update();     // Update UI with VESC data (checks 50ms interval internally)
   ui_updater_update_fps(); // Update FPS counter independently
+  //check_brightness_changes(); // Check for brightness setting changes
   Lvgl_Loop();
   //Serial.println("LVGL loop");
   //Touch_Loop();  // Process touch interrupts

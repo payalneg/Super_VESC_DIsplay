@@ -14,7 +14,7 @@
 	Note: CAN speed and Controller ID changes require device restart to take effect!
 */
 
-#include "settings.h"
+#include "dev_settings.h"
 #include "debug_log.h"
 #include <Arduino.h>
 #include <string.h>

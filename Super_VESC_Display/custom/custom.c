@@ -661,7 +661,7 @@ void settings_ui_init(lv_ui *ui) {
     lv_obj_set_style_border_width(settings_reset_button, 0, 0);
     lv_obj_add_event_cb(settings_reset_button, reset_button_event_cb, LV_EVENT_CLICKED, NULL);
     
-    y_pos += 50;
+    y_pos += spacing;
     
     // ========== Info Label ==========
     settings_info_label = lv_label_create(ui->settings);
