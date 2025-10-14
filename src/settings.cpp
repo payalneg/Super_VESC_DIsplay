@@ -21,7 +21,7 @@
 
 // Default settings
 #define DEFAULT_TARGET_VESC_ID      10
-#define DEFAULT_CAN_SPEED           CAN_SPEED_250_KBPS
+#define DEFAULT_CAN_SPEED           CAN_SPEED_1000_KBPS
 #define DEFAULT_BRIGHTNESS          80
 #define DEFAULT_CONTROLLER_ID       2
 

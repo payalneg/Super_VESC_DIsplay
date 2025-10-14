@@ -48,7 +48,7 @@
 void setup()
 {
   Serial.begin(115200);
-  //delay(5000);
+  delay(500);
   LOG_INFO(SYSTEM, "VESC Display Starting...");
   
   // Initialize settings system first (loads from NVS)

@@ -16,6 +16,7 @@ extern "C" {
 #include "gui_guider.h"
 
 void custom_init(lv_ui *ui);
+void settings_ui_init(lv_ui *ui);
 void home_label_digit_animation(lv_ui *ui);
 void speed_meter_timer_cb(lv_timer_t * t);
 void digital_cluster_chart_timer_cb(lv_timer_t * t);

@@ -81,6 +81,7 @@ void vesc_rt_data_stop(void) {
 void vesc_rt_data_request(void) {
 	// Request RT data (50ms interval)
 	uint32_t mask = 
+		MASK_AMP_HOURS |
 		MASK_TEMP_MOS |         // Temperature MOSFET
 		MASK_TEMP_MOTOR |       // Temperature Moto
 		MASK_CURRENT_IN |       // Battery current (A)

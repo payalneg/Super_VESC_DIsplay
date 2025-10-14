@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include "lvgl.h"
 #include "custom.h"
+#include "settings_wrapper.h"
 
 /*********************
  *      DEFINES
@@ -33,6 +34,18 @@
  **********************/
 
 extern lv_ui guider_ui;
+
+// Settings UI objects (dynamically created)
+static lv_obj_t *settings_target_id_slider = NULL;
+static lv_obj_t *settings_target_id_label = NULL;
+static lv_obj_t *settings_can_speed_dropdown = NULL;
+static lv_obj_t *settings_can_speed_label = NULL;
+static lv_obj_t *settings_brightness_slider = NULL;
+static lv_obj_t *settings_brightness_label = NULL;
+static lv_obj_t *settings_controller_id_slider = NULL;
+static lv_obj_t *settings_controller_id_label = NULL;
+static lv_obj_t *settings_reset_button = NULL;
+static lv_obj_t *settings_info_label = NULL;
 /**
  * Create a demo application
  */
@@ -48,6 +61,15 @@ static void set_position_y(void * gui, int32_t temp)
   
 }
 
+// Settings screen load event handler - called when settings screen is loaded
+static void settings_screen_loaded_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_SCREEN_LOADED || code == LV_EVENT_SCREEN_LOAD_START) {
+        // Initialize settings UI when screen is loaded
+        //settings_ui_init(&guider_ui);
+    }
+}
+
 void custom_init(lv_ui *ui)
 {
     /* Add your codes here */
@@ -61,6 +83,12 @@ void custom_init(lv_ui *ui)
     if (ui->dashboard_esc_not_connected_text != NULL) {
         lv_obj_add_flag(ui->dashboard_esc_not_connected_text, LV_OBJ_FLAG_HIDDEN);
     }
+    
+    // Add event handler for settings screen to initialize UI when loaded
+    // This ensures settings UI is created even if GUI is regenerated
+    //if (ui->settings != NULL) {
+    //    lv_obj_add_event_cb(ui->settings, settings_screen_loaded_event_cb, LV_EVENT_ALL, NULL);
+    //}
 }
 
 void speed_meter_timer_cb(lv_timer_t * t)
@@ -289,7 +317,7 @@ void update_fps(int fps)
 
 void update_uptime(uint32_t uptime)
 {
-    int value = uptime/10;
+    int value = uptime/1000;
     static uint32_t old_value = -999;
     if (value == old_value) {
         return;
@@ -360,4 +388,234 @@ void update_esc_connection_status(bool connected)
             }
         }
     }
+}
+
+// ============================================================================
+// SETTINGS UI IMPLEMENTATION
+// ============================================================================
+
+// Event handler for Target VESC ID slider
+static void target_id_slider_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_VALUE_CHANGED) {
+        lv_obj_t *slider = lv_event_get_target(e);
+        int32_t value = lv_slider_get_value(slider);
+        
+        // Update label
+        char buf[32];
+        sprintf(buf, "Target VESC ID: %d", (int)value);
+        lv_label_set_text(settings_target_id_label, buf);
+        
+        // Save to settings
+        settings_wrapper_set_target_vesc_id((uint8_t)value);
+    }
+}
+
+// Event handler for CAN speed dropdown
+static void can_speed_dropdown_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_VALUE_CHANGED) {
+        lv_obj_t *dropdown = lv_event_get_target(e);
+        uint16_t selected = lv_dropdown_get_selected(dropdown);
+        
+        // Save to settings
+        settings_wrapper_set_can_speed_index((uint8_t)selected);
+        
+        // Update info label
+        lv_label_set_text(settings_info_label, "CAN speed requires restart!");
+    }
+}
+
+// Event handler for brightness slider
+static void brightness_slider_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_VALUE_CHANGED) {
+        lv_obj_t *slider = lv_event_get_target(e);
+        int32_t value = lv_slider_get_value(slider);
+        
+        // Update label
+        char buf[32];
+        sprintf(buf, "Brightness: %d%%", (int)value);
+        lv_label_set_text(settings_brightness_label, buf);
+        
+        // Save to settings and apply immediately
+        settings_wrapper_set_brightness((uint8_t)value);
+    }
+}
+
+// Event handler for Controller ID slider
+static void controller_id_slider_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_VALUE_CHANGED) {
+        lv_obj_t *slider = lv_event_get_target(e);
+        int32_t value = lv_slider_get_value(slider);
+        
+        // Update label
+        char buf[32];
+        sprintf(buf, "Controller ID: %d", (int)value);
+        lv_label_set_text(settings_controller_id_label, buf);
+        
+        // Save to settings
+        settings_wrapper_set_controller_id((uint8_t)value);
+        
+        // Update info label
+        lv_label_set_text(settings_info_label, "Controller ID requires restart!");
+    }
+}
+
+// Event handler for Reset button
+static void reset_button_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED) {
+        // Reset all settings to defaults
+        settings_wrapper_set_target_vesc_id(10);
+        settings_wrapper_set_can_speed_index(3); // 1000 kbps
+        settings_wrapper_set_brightness(80);
+        settings_wrapper_set_controller_id(2);
+        
+        // Update UI elements
+        if (settings_target_id_slider) {
+            lv_slider_set_value(settings_target_id_slider, 10, LV_ANIM_ON);
+        }
+        if (settings_can_speed_dropdown) {
+            lv_dropdown_set_selected(settings_can_speed_dropdown, 3);
+        }
+        if (settings_brightness_slider) {
+            lv_slider_set_value(settings_brightness_slider, 80, LV_ANIM_ON);
+        }
+        if (settings_controller_id_slider) {
+            lv_slider_set_value(settings_controller_id_slider, 2, LV_ANIM_ON);
+        }
+        
+        // Update info
+        lv_label_set_text(settings_info_label, "Settings reset to defaults!");
+    }
+}
+
+// Initialize settings UI - called from custom_init or when settings screen loads
+void settings_ui_init(lv_ui *ui) {
+    if (!ui || !ui->settings) {
+        return;
+    }
+    
+    // Check if already initialized (prevent double initialization)
+    if (settings_target_id_slider != NULL) {
+        return; // Already initialized
+    }
+    
+    // Initialize settings system
+    settings_wrapper_init();
+    
+    // Get current settings
+    uint8_t target_id = settings_wrapper_get_target_vesc_id();
+    uint8_t can_speed_idx = settings_wrapper_get_can_speed_index();
+    uint8_t brightness = settings_wrapper_get_brightness();
+    uint8_t controller_id = settings_wrapper_get_controller_id();
+    
+    int y_pos = 70; // Start below "Back to dashboard" button
+    int spacing = 65;
+    
+    // ========== Target VESC ID Slider ==========
+    settings_target_id_label = lv_label_create(ui->settings);
+    char buf[32];
+    sprintf(buf, "Target VESC ID: %d", target_id);
+    lv_label_set_text(settings_target_id_label, buf);
+    lv_obj_set_pos(settings_target_id_label, 20, y_pos);
+    lv_obj_set_style_text_color(settings_target_id_label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_target_id_label, &lv_font_montserratMedium_16, 0);
+    
+    settings_target_id_slider = lv_slider_create(ui->settings);
+    lv_slider_set_range(settings_target_id_slider, 1, 254);
+    lv_slider_set_value(settings_target_id_slider, target_id, LV_ANIM_OFF);
+    lv_obj_set_pos(settings_target_id_slider, 20, y_pos + 25);
+    lv_obj_set_size(settings_target_id_slider, 440, 15);
+    lv_obj_set_style_bg_color(settings_target_id_slider, lv_color_hex(0x2a3440), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(settings_target_id_slider, lv_color_hex(0x00a9ff), LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(settings_target_id_slider, lv_color_hex(0xffffff), LV_PART_KNOB);
+    lv_obj_add_event_cb(settings_target_id_slider, target_id_slider_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    
+    y_pos += spacing;
+    
+    // ========== CAN Speed Dropdown ==========
+    settings_can_speed_label = lv_label_create(ui->settings);
+    lv_label_set_text(settings_can_speed_label, "CAN Speed (kbps)");
+    lv_obj_set_pos(settings_can_speed_label, 20, y_pos);
+    lv_obj_set_style_text_color(settings_can_speed_label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_can_speed_label, &lv_font_montserratMedium_16, 0);
+    
+    settings_can_speed_dropdown = lv_dropdown_create(ui->settings);
+    lv_dropdown_set_options(settings_can_speed_dropdown, "125 kbps\n250 kbps\n500 kbps\n1000 kbps");
+    lv_dropdown_set_selected(settings_can_speed_dropdown, can_speed_idx);
+    lv_obj_set_pos(settings_can_speed_dropdown, 20, y_pos + 25);
+    lv_obj_set_size(settings_can_speed_dropdown, 440, 40);
+    lv_obj_set_style_bg_color(settings_can_speed_dropdown, lv_color_hex(0x2a3440), 0);
+    lv_obj_set_style_text_color(settings_can_speed_dropdown, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_can_speed_dropdown, &lv_font_montserratMedium_16, 0);
+    lv_obj_set_style_border_width(settings_can_speed_dropdown, 0, 0);
+    lv_obj_add_event_cb(settings_can_speed_dropdown, can_speed_dropdown_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    
+    y_pos += spacing + 10;
+    
+    // ========== Brightness Slider ==========
+    settings_brightness_label = lv_label_create(ui->settings);
+    sprintf(buf, "Brightness: %d%%", brightness);
+    lv_label_set_text(settings_brightness_label, buf);
+    lv_obj_set_pos(settings_brightness_label, 20, y_pos);
+    lv_obj_set_style_text_color(settings_brightness_label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_brightness_label, &lv_font_montserratMedium_16, 0);
+    
+    settings_brightness_slider = lv_slider_create(ui->settings);
+    lv_slider_set_range(settings_brightness_slider, 0, 100);
+    lv_slider_set_value(settings_brightness_slider, brightness, LV_ANIM_OFF);
+    lv_obj_set_pos(settings_brightness_slider, 20, y_pos + 25);
+    lv_obj_set_size(settings_brightness_slider, 440, 15);
+    lv_obj_set_style_bg_color(settings_brightness_slider, lv_color_hex(0x2a3440), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(settings_brightness_slider, lv_color_hex(0xffa500), LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(settings_brightness_slider, lv_color_hex(0xffffff), LV_PART_KNOB);
+    lv_obj_add_event_cb(settings_brightness_slider, brightness_slider_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    
+    y_pos += spacing;
+    
+    // ========== Controller ID Slider ==========
+    settings_controller_id_label = lv_label_create(ui->settings);
+    sprintf(buf, "Controller ID: %d", controller_id);
+    lv_label_set_text(settings_controller_id_label, buf);
+    lv_obj_set_pos(settings_controller_id_label, 20, y_pos);
+    lv_obj_set_style_text_color(settings_controller_id_label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_controller_id_label, &lv_font_montserratMedium_16, 0);
+    
+    settings_controller_id_slider = lv_slider_create(ui->settings);
+    lv_slider_set_range(settings_controller_id_slider, 1, 254);
+    lv_slider_set_value(settings_controller_id_slider, controller_id, LV_ANIM_OFF);
+    lv_obj_set_pos(settings_controller_id_slider, 20, y_pos + 25);
+    lv_obj_set_size(settings_controller_id_slider, 440, 15);
+    lv_obj_set_style_bg_color(settings_controller_id_slider, lv_color_hex(0x2a3440), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(settings_controller_id_slider, lv_color_hex(0x00ff00), LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(settings_controller_id_slider, lv_color_hex(0xffffff), LV_PART_KNOB);
+    lv_obj_add_event_cb(settings_controller_id_slider, controller_id_slider_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    
+    y_pos += spacing;
+    
+    // ========== Reset Button ==========
+    settings_reset_button = lv_btn_create(ui->settings);
+    lv_obj_t *reset_label = lv_label_create(settings_reset_button);
+    lv_label_set_text(reset_label, "Reset to Defaults");
+    lv_obj_align(reset_label, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_pos(settings_reset_button, 20, y_pos);
+    lv_obj_set_size(settings_reset_button, 440, 40);
+    lv_obj_set_style_bg_color(settings_reset_button, lv_color_hex(0xff4444), 0);
+    lv_obj_set_style_text_color(settings_reset_button, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_reset_button, &lv_font_montserratMedium_16, 0);
+    lv_obj_set_style_radius(settings_reset_button, 5, 0);
+    lv_obj_set_style_border_width(settings_reset_button, 0, 0);
+    lv_obj_add_event_cb(settings_reset_button, reset_button_event_cb, LV_EVENT_CLICKED, NULL);
+    
+    y_pos += 50;
+    
+    // ========== Info Label ==========
+    settings_info_label = lv_label_create(ui->settings);
+    lv_label_set_text(settings_info_label, "Settings saved automatically");
+    lv_obj_set_pos(settings_info_label, 20, y_pos);
+    lv_obj_set_style_text_color(settings_info_label, lv_color_hex(0x00ff00), 0);
+    lv_obj_set_style_text_font(settings_info_label, &lv_font_montserratMedium_13, 0);
 }

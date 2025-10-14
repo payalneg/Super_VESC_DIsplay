@@ -425,7 +425,7 @@
 
 #define LV_USE_BAR 1
 
-#define LV_USE_BTN 0
+#define LV_USE_BTN 1
 
 #define LV_USE_BTNMATRIX 0
 
