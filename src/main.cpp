@@ -183,7 +183,9 @@ void setup()
 void loop()
 {
   BLE_Loop();              // Process BLE communication
-  vesc_rt_data_loop();     // Process RT data requests
+  if (millis() > 5000) {
+    vesc_rt_data_loop();     // Process RT data requests
+  }
   ui_updater_update();     // Update UI with VESC data (checks 50ms interval internally)
   ui_updater_update_fps(); // Update FPS counter independently
   //check_brightness_changes(); // Check for brightness setting changes

@@ -516,6 +516,57 @@ void comm_can_stop(void) {
 	twai_driver_uninstall();
 }
 
+void comm_can_reinit(uint8_t controller_id, int can_speed_kbps) {
+	LOG_INFO(CAN, "Reinitializing CAN: ID=%d, Speed=%d kbps", controller_id, can_speed_kbps);
+	
+	// Store previous pin configuration
+	int prev_tx = g_config.tx_io;
+	int prev_rx = g_config.rx_io;
+	
+	// Stop CAN bus
+	comm_can_stop();
+	
+	// Wait for complete stop
+	vTaskDelay(pdMS_TO_TICKS(100));
+	
+	// Update configuration
+	can_config.controller_id = controller_id;
+	can_config.can_baud_rate_kbps = can_speed_kbps;
+	
+	// Set CAN timing based on speed
+	switch (can_speed_kbps) {
+		case 125:
+			t_config = TWAI_TIMING_CONFIG_125KBITS();
+			break;
+		case 250:
+			t_config = TWAI_TIMING_CONFIG_250KBITS();
+			break;
+		case 500:
+			t_config = TWAI_TIMING_CONFIG_500KBITS();
+			break;
+		case 1000:
+			t_config = TWAI_TIMING_CONFIG_1MBITS();
+			break;
+		default:
+			LOG_WARN(CAN, "Invalid CAN speed %d kbps, using 250 kbps", can_speed_kbps);
+			t_config = TWAI_TIMING_CONFIG_250KBITS();
+			can_config.can_baud_rate_kbps = 250;
+			break;
+	}
+	
+	// Reinstall and restart CAN driver
+	twai_driver_install(&g_config, &t_config, &f_config);
+	twai_start();
+	
+	stop_threads = false;
+	start_rx_thd();
+	
+	init_done = true;
+	
+	LOG_INFO(CAN, "CAN reinitialized successfully: TX=%d, RX=%d, ID=%d, Speed=%d kbps", 
+	         prev_tx, prev_rx, controller_id, can_config.can_baud_rate_kbps);
+}
+
 void comm_can_transmit_eid(uint32_t id, const uint8_t *data, uint8_t len) {
 	if (!init_done) {
 		return;

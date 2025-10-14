@@ -168,7 +168,10 @@ void settings_set_can_speed(can_speed_t speed) {
     
     g_settings.can_speed = speed;
     settings_save();
-    LOG_INFO(SYSTEM, "CAN speed set to %d kbps (will take effect after restart)", (int)speed);
+    LOG_INFO(SYSTEM, "CAN speed set to %d kbps, reinitializing CAN...", (int)speed);
+    
+    // Reinitialize CAN with new speed
+    comm_can_reinit(g_settings.controller_id, (int)speed);
 }
 
 void settings_set_screen_brightness(uint8_t brightness) {
@@ -191,7 +194,10 @@ void settings_set_controller_id(uint8_t id) {
     
     g_settings.controller_id = id;
     settings_save();
-    LOG_INFO(SYSTEM, "Controller ID set to %d (will take effect after restart)", id);
+    LOG_INFO(SYSTEM, "Controller ID set to %d, reinitializing CAN...", id);
+    
+    // Reinitialize CAN with new controller ID
+    comm_can_reinit(id, (int)g_settings.can_speed);
 }
 
 // Apply brightness to hardware
@@ -199,11 +205,10 @@ void settings_apply_brightness(void) {
     Set_Backlight(g_settings.screen_brightness);
 }
 
-// Apply CAN speed - requires restart
+// Apply CAN speed - no longer requires restart, happens automatically
 bool settings_apply_can_speed(void) {
-    // Note: This requires restarting CAN bus
-    // Return true to indicate restart is needed
-    LOG_INFO(SYSTEM, "CAN speed change requires system restart");
-    return true;
+    // CAN is now automatically reinitialized when speed changes
+    // Return false to indicate no system restart is needed
+    return false;
 }
 
