@@ -23,7 +23,7 @@
 #define DEFAULT_TARGET_VESC_ID      10
 #define DEFAULT_CAN_SPEED           CAN_SPEED_1000_KBPS
 #define DEFAULT_BRIGHTNESS          80
-#define DEFAULT_CONTROLLER_ID       2
+#define DEFAULT_CONTROLLER_ID       255 //DO NOT CHANGE PLEASE
 
 // Global settings storage
 static device_settings_t g_settings;

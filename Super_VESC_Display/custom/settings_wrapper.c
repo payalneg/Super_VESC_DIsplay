@@ -31,7 +31,7 @@ static struct {
     .target_vesc_id = 10,
     .can_speed_index = 3,  // 1000 kbps
     .brightness = 80,
-    .controller_id = 2
+    .controller_id = 255
 };
 #endif
 

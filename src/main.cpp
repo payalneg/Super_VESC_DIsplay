@@ -45,6 +45,59 @@
 #include "debug_log.h"               // Logging system
 #include "settings.h"                // Settings system
 
+// Brightness monitoring variables
+static uint32_t last_brightness_check = 0;
+static uint32_t brightness_check_interval = 1000; // Check every 1 second
+static uint8_t current_brightness = 0;
+static bool brightness_changed = false;
+
+// Brightness monitoring functions
+void brightness_monitor_init(void) {
+    current_brightness = settings_get_screen_brightness();
+    LOG_INFO(SYSTEM, "Brightness monitoring initialized at %d%%", current_brightness);
+}
+
+void brightness_monitor_update(void) {
+    uint32_t current_time = millis();
+    
+    // Check if it's time to update brightness monitoring
+    if (current_time - last_brightness_check >= brightness_check_interval) {
+        last_brightness_check = current_time;
+        
+        // Here you can add logic to detect external brightness changes
+        // For example, reading from a light sensor, BLE commands, etc.
+        // For now, we'll just check if settings have changed
+        
+        uint8_t new_brightness = settings_get_screen_brightness();
+        if (new_brightness != current_brightness) {
+            current_brightness = new_brightness;
+            brightness_changed = true;
+            LOG_INFO(SYSTEM, "Brightness changed to %d%%", current_brightness);
+        }
+    }
+}
+
+void brightness_apply_if_changed(void) {
+    if (brightness_changed) {
+        settings_apply_brightness();
+        brightness_changed = false;
+        LOG_INFO(SYSTEM, "Applied brightness change to %d%%", current_brightness);
+    }
+}
+
+// Function to set brightness from external sources (BLE, CAN, etc.)
+void brightness_set_external(uint8_t brightness) {
+    if (brightness > 100) {
+        LOG_WARN(SYSTEM, "Invalid brightness %d (must be 0-100)", brightness);
+        return;
+    }
+    
+    settings_set_screen_brightness(brightness);
+    current_brightness = brightness;
+    brightness_changed = true;
+    LOG_INFO(SYSTEM, "External brightness change to %d%%", brightness);
+}
+
 void setup()
 {
   Serial.begin(115200);

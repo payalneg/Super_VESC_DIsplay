@@ -91,7 +91,7 @@ static void dashboard_img_4_event_handler (lv_event_t *e)
     switch (code) {
     case LV_EVENT_CLICKED:
     {
-        ui_load_scr_animation(&guider_ui, &guider_ui.settings, guider_ui.settings_del, &guider_ui.dashboard_del, setup_scr_settings, LV_SCR_LOAD_ANIM_NONE, 200, 200, false, true);
+        ui_load_scr_animation(&guider_ui, &guider_ui.settings, guider_ui.settings_del, &guider_ui.dashboard_del, setup_scr_settings, LV_SCR_LOAD_ANIM_NONE, 200, 200, false, false);
         break;
     }
     default:
@@ -108,13 +108,27 @@ void events_init_dashboard (lv_ui *ui)
     lv_obj_add_event_cb(ui->dashboard_img_4, dashboard_img_4_event_handler, LV_EVENT_ALL, ui);
 }
 
+static void settings_event_handler (lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    switch (code) {
+    case LV_EVENT_SCREEN_LOADED:
+    {
+        settings_ui_init(&guider_ui);
+        break;
+    }
+    default:
+        break;
+    }
+}
+
 static void settings_exit_button_event_handler (lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
     switch (code) {
     case LV_EVENT_CLICKED:
     {
-        ui_load_scr_animation(&guider_ui, &guider_ui.dashboard, guider_ui.dashboard_del, &guider_ui.settings_del, setup_scr_dashboard, LV_SCR_LOAD_ANIM_NONE, 200, 200, false, true);
+        ui_load_scr_animation(&guider_ui, &guider_ui.dashboard, guider_ui.dashboard_del, &guider_ui.settings_del, setup_scr_dashboard, LV_SCR_LOAD_ANIM_NONE, 200, 200, false, false);
         break;
     }
     default:
@@ -124,6 +138,7 @@ static void settings_exit_button_event_handler (lv_event_t *e)
 
 void events_init_settings (lv_ui *ui)
 {
+    lv_obj_add_event_cb(ui->settings, settings_event_handler, LV_EVENT_ALL, ui);
     lv_obj_add_event_cb(ui->settings_exit_button, settings_exit_button_event_handler, LV_EVENT_ALL, ui);
 }
 

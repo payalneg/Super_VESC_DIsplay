@@ -281,7 +281,7 @@
 												"scrId": "g53wa3pp",
 												"anim_type": "LV_SCR_LOAD_ANIM_NONE",
 												"is_clean": false,
-												"is_del": true
+												"is_del": false
 											}
 										}
 									}
@@ -4979,10 +4979,10 @@
 					"name": "exit_button",
 					"id": "yj569g77",
 					"type": "btn",
-					"left": 15,
+					"left": 16,
 					"top": 15,
 					"visible": true,
-					"isLock": false,
+					"isLock": true,
 					"flag": [],
 					"width": 450,
 					"height": 40,
@@ -5173,7 +5173,7 @@
 												"scrId": "ehjqt834",
 												"anim_type": "LV_SCR_LOAD_ANIM_NONE",
 												"is_clean": false,
-												"is_del": true
+												"is_del": false
 											}
 										}
 									}
@@ -5201,6 +5201,27 @@
 					"bg_img_recolor_opa": 0
 				}
 			],
+			"event": {
+				"widget": {
+					"screen_loaded": {
+						"condition": [],
+						"action": [
+							{
+								"dst": "custom_code",
+								"bindCondi": "",
+								"actionList": {
+									"custom_code": {
+										"inc_c": "",
+										"code_c": "settings_ui_init(&guider_ui);",
+										"inc_py": "",
+										"code_py": ""
+									}
+								}
+							}
+						]
+					}
+				}
+			},
 			"layerName": "settings"
 		}
 	],
@@ -10084,7 +10105,7 @@
 													"scrId": "g53wa3pp",
 													"anim_type": "LV_SCR_LOAD_ANIM_NONE",
 													"is_clean": false,
-													"is_del": true
+													"is_del": false
 												}
 											},
 											"dst_type": "scr"
@@ -10150,6 +10171,27 @@
 						"bg_img_recolor_opa": 0
 					}
 				],
+				"event": {
+					"widget": {
+						"screen_loaded": {
+							"condition": [],
+							"action": [
+								{
+									"dst": "custom_code",
+									"bindCondi": "",
+									"actionList": {
+										"custom_code": {
+											"inc_c": "",
+											"code_c": "settings_ui_init(&guider_ui);",
+											"inc_py": "",
+											"code_py": ""
+										}
+									}
+								}
+							]
+						}
+					}
+				},
 				"layerName": "settings",
 				"size": [
 					480,
@@ -10163,7 +10205,7 @@
 						"visible": true,
 						"flag": [],
 						"pos": [
-							15,
+							16,
 							15
 						],
 						"size": [
@@ -10186,7 +10228,7 @@
 													"scrId": "ehjqt834",
 													"anim_type": "LV_SCR_LOAD_ANIM_NONE",
 													"is_clean": false,
-													"is_del": true
+													"is_del": false
 												}
 											},
 											"dst_type": "scr"

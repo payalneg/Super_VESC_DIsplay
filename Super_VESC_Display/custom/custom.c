@@ -36,8 +36,10 @@
 extern lv_ui guider_ui;
 
 // Settings UI objects (dynamically created)
-static lv_obj_t *settings_target_id_slider = NULL;
+static lv_obj_t *settings_target_id_spinbox = NULL;
 static lv_obj_t *settings_target_id_label = NULL;
+static lv_obj_t *settings_target_id_plus_btn = NULL;
+static lv_obj_t *settings_target_id_minus_btn = NULL;
 static lv_obj_t *settings_can_speed_dropdown = NULL;
 static lv_obj_t *settings_can_speed_label = NULL;
 static lv_obj_t *settings_brightness_slider = NULL;
@@ -61,15 +63,6 @@ static void set_position_y(void * gui, int32_t temp)
   
 }
 
-// Settings screen load event handler - called when settings screen is loaded
-static void settings_screen_loaded_event_cb(lv_event_t *e) {
-    lv_event_code_t code = lv_event_get_code(e);
-    if (code == LV_EVENT_SCREEN_LOADED || code == LV_EVENT_SCREEN_LOAD_START) {
-        // Initialize settings UI when screen is loaded
-        //settings_ui_init(&guider_ui);
-    }
-}
-
 void custom_init(lv_ui *ui)
 {
     /* Add your codes here */
@@ -84,11 +77,6 @@ void custom_init(lv_ui *ui)
         lv_obj_add_flag(ui->dashboard_esc_not_connected_text, LV_OBJ_FLAG_HIDDEN);
     }
     
-    // Add event handler for settings screen to initialize UI when loaded
-    // This ensures settings UI is created even if GUI is regenerated
-    //if (ui->settings != NULL) {
-    //    lv_obj_add_event_cb(ui->settings, settings_screen_loaded_event_cb, LV_EVENT_ALL, NULL);
-    //}
 }
 
 void speed_meter_timer_cb(lv_timer_t * t)
@@ -394,12 +382,12 @@ void update_esc_connection_status(bool connected)
 // SETTINGS UI IMPLEMENTATION
 // ============================================================================
 
-// Event handler for Target VESC ID slider
-static void target_id_slider_event_cb(lv_event_t *e) {
+// Event handler for Target VESC ID spinbox
+static void target_id_spinbox_event_cb(lv_event_t *e) {
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_VALUE_CHANGED) {
-        lv_obj_t *slider = lv_event_get_target(e);
-        int32_t value = lv_slider_get_value(slider);
+        lv_obj_t *spinbox = lv_event_get_target(e);
+        int32_t value = lv_spinbox_get_value(spinbox);
         
         // Update label
         char buf[32];
@@ -408,6 +396,28 @@ static void target_id_slider_event_cb(lv_event_t *e) {
         
         // Save to settings
         settings_wrapper_set_target_vesc_id((uint8_t)value);
+    }
+}
+
+// Event handler for Plus button
+static void target_id_plus_btn_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED) {
+        int32_t current_value = lv_spinbox_get_value(settings_target_id_spinbox);
+        if (current_value < 254) {
+            lv_spinbox_increment(settings_target_id_spinbox);
+        }
+    }
+}
+
+// Event handler for Minus button
+static void target_id_minus_btn_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED) {
+        int32_t current_value = lv_spinbox_get_value(settings_target_id_spinbox);
+        if (current_value > 1) {
+            lv_spinbox_decrement(settings_target_id_spinbox);
+        }
     }
 }
 
@@ -474,8 +484,8 @@ static void reset_button_event_cb(lv_event_t *e) {
         settings_wrapper_set_controller_id(2);
         
         // Update UI elements
-        if (settings_target_id_slider) {
-            lv_slider_set_value(settings_target_id_slider, 10, LV_ANIM_ON);
+        if (settings_target_id_spinbox) {
+            lv_spinbox_set_value(settings_target_id_spinbox, 10);
         }
         if (settings_can_speed_dropdown) {
             lv_dropdown_set_selected(settings_can_speed_dropdown, 3);
@@ -499,7 +509,7 @@ void settings_ui_init(lv_ui *ui) {
     }
     
     // Check if already initialized (prevent double initialization)
-    if (settings_target_id_slider != NULL) {
+    if (settings_target_id_spinbox != NULL) {
         return; // Already initialized
     }
     
@@ -513,26 +523,63 @@ void settings_ui_init(lv_ui *ui) {
     uint8_t controller_id = settings_wrapper_get_controller_id();
     
     int y_pos = 70; // Start below "Back to dashboard" button
-    int spacing = 65;
+    int spacing = 100;
     
-    // ========== Target VESC ID Slider ==========
+    // ========== Target VESC ID Spinbox ==========
     settings_target_id_label = lv_label_create(ui->settings);
     char buf[32];
-    sprintf(buf, "Target VESC ID: %d", target_id);
+    sprintf(buf, "Target VESC ID:");
     lv_label_set_text(settings_target_id_label, buf);
     lv_obj_set_pos(settings_target_id_label, 20, y_pos);
     lv_obj_set_style_text_color(settings_target_id_label, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_text_font(settings_target_id_label, &lv_font_montserratMedium_16, 0);
     
-    settings_target_id_slider = lv_slider_create(ui->settings);
-    lv_slider_set_range(settings_target_id_slider, 1, 254);
-    lv_slider_set_value(settings_target_id_slider, target_id, LV_ANIM_OFF);
-    lv_obj_set_pos(settings_target_id_slider, 20, y_pos + 25);
-    lv_obj_set_size(settings_target_id_slider, 440, 15);
-    lv_obj_set_style_bg_color(settings_target_id_slider, lv_color_hex(0x2a3440), LV_PART_MAIN);
-    lv_obj_set_style_bg_color(settings_target_id_slider, lv_color_hex(0x00a9ff), LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(settings_target_id_slider, lv_color_hex(0xffffff), LV_PART_KNOB);
-    lv_obj_add_event_cb(settings_target_id_slider, target_id_slider_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    // Create Minus button (left side)
+    settings_target_id_minus_btn = lv_btn_create(ui->settings);
+    lv_obj_t *minus_label = lv_label_create(settings_target_id_minus_btn);
+    lv_label_set_text(minus_label, "-");
+    lv_obj_align(minus_label, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_pos(settings_target_id_minus_btn, 20, y_pos + 25);
+    lv_obj_set_size(settings_target_id_minus_btn, 60, 50);
+    lv_obj_set_style_bg_color(settings_target_id_minus_btn, lv_color_hex(0xff4444), 0);
+    lv_obj_set_style_text_color(settings_target_id_minus_btn, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_target_id_minus_btn, &lv_font_montserratMedium_16, 0);
+    lv_obj_set_style_radius(settings_target_id_minus_btn, 8, 0);
+    lv_obj_set_style_border_width(settings_target_id_minus_btn, 0, 0);
+    lv_obj_add_event_cb(settings_target_id_minus_btn, target_id_minus_btn_event_cb, LV_EVENT_CLICKED, NULL);
+    
+    // Create spinbox for VESC ID selection (center) - positioned relative to minus button
+    settings_target_id_spinbox = lv_spinbox_create(ui->settings);
+    lv_spinbox_set_range(settings_target_id_spinbox, 1, 254);
+    lv_spinbox_set_digit_format(settings_target_id_spinbox, 3, 0); // 3 digits, 0 decimal places
+    lv_spinbox_set_value(settings_target_id_spinbox, target_id);
+    lv_spinbox_set_step(settings_target_id_spinbox, 1);
+    lv_obj_set_pos(settings_target_id_spinbox, 90, y_pos + 25); // 20 + 60 + 10 margin
+    lv_obj_set_size(settings_target_id_spinbox, 300, 50);
+    
+    // Style the spinbox
+    lv_obj_set_style_bg_color(settings_target_id_spinbox, lv_color_hex(0x2a3440), LV_PART_MAIN);
+    lv_obj_set_style_text_color(settings_target_id_spinbox, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+    lv_obj_set_style_text_font(settings_target_id_spinbox, &lv_font_montserratMedium_16, LV_PART_MAIN);
+    lv_obj_set_style_border_width(settings_target_id_spinbox, 1, LV_PART_MAIN);
+    lv_obj_set_style_border_color(settings_target_id_spinbox, lv_color_hex(0x00a9ff), LV_PART_MAIN);
+    lv_obj_set_style_radius(settings_target_id_spinbox, 8, LV_PART_MAIN);
+    
+    lv_obj_add_event_cb(settings_target_id_spinbox, target_id_spinbox_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    
+    // Create Plus button (right side) - positioned relative to spinbox
+    settings_target_id_plus_btn = lv_btn_create(ui->settings);
+    lv_obj_t *plus_label = lv_label_create(settings_target_id_plus_btn);
+    lv_label_set_text(plus_label, "+");
+    lv_obj_align(plus_label, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_pos(settings_target_id_plus_btn, 400, y_pos + 25); // 90 + 300 + 10 margin
+    lv_obj_set_size(settings_target_id_plus_btn, 60, 50);
+    lv_obj_set_style_bg_color(settings_target_id_plus_btn, lv_color_hex(0x00a9ff), 0);
+    lv_obj_set_style_text_color(settings_target_id_plus_btn, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_target_id_plus_btn, &lv_font_montserratMedium_16, 0);
+    lv_obj_set_style_radius(settings_target_id_plus_btn, 8, 0);
+    lv_obj_set_style_border_width(settings_target_id_plus_btn, 0, 0);
+    lv_obj_add_event_cb(settings_target_id_plus_btn, target_id_plus_btn_event_cb, LV_EVENT_CLICKED, NULL);
     
     y_pos += spacing;
     
@@ -547,11 +594,12 @@ void settings_ui_init(lv_ui *ui) {
     lv_dropdown_set_options(settings_can_speed_dropdown, "125 kbps\n250 kbps\n500 kbps\n1000 kbps");
     lv_dropdown_set_selected(settings_can_speed_dropdown, can_speed_idx);
     lv_obj_set_pos(settings_can_speed_dropdown, 20, y_pos + 25);
-    lv_obj_set_size(settings_can_speed_dropdown, 440, 40);
+    lv_obj_set_size(settings_can_speed_dropdown, 440, 50); // Match height with spinbox group
     lv_obj_set_style_bg_color(settings_can_speed_dropdown, lv_color_hex(0x2a3440), 0);
     lv_obj_set_style_text_color(settings_can_speed_dropdown, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_text_font(settings_can_speed_dropdown, &lv_font_montserratMedium_16, 0);
     lv_obj_set_style_border_width(settings_can_speed_dropdown, 0, 0);
+    lv_obj_set_style_radius(settings_can_speed_dropdown, 8, 0); // Match radius with other elements
     lv_obj_add_event_cb(settings_can_speed_dropdown, can_speed_dropdown_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
     
     y_pos += spacing + 10;
@@ -568,14 +616,17 @@ void settings_ui_init(lv_ui *ui) {
     lv_slider_set_range(settings_brightness_slider, 0, 100);
     lv_slider_set_value(settings_brightness_slider, brightness, LV_ANIM_OFF);
     lv_obj_set_pos(settings_brightness_slider, 20, y_pos + 25);
-    lv_obj_set_size(settings_brightness_slider, 440, 15);
+    lv_obj_set_size(settings_brightness_slider, 440, 20); // Slightly thicker for better touch
     lv_obj_set_style_bg_color(settings_brightness_slider, lv_color_hex(0x2a3440), LV_PART_MAIN);
     lv_obj_set_style_bg_color(settings_brightness_slider, lv_color_hex(0xffa500), LV_PART_INDICATOR);
     lv_obj_set_style_bg_color(settings_brightness_slider, lv_color_hex(0xffffff), LV_PART_KNOB);
+    lv_obj_set_style_radius(settings_brightness_slider, 10, LV_PART_MAIN); // Rounded slider
+    lv_obj_set_style_radius(settings_brightness_slider, 10, LV_PART_INDICATOR);
     lv_obj_add_event_cb(settings_brightness_slider, brightness_slider_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
     
     y_pos += spacing;
     
+    /*
     // ========== Controller ID Slider ==========
     settings_controller_id_label = lv_label_create(ui->settings);
     sprintf(buf, "Controller ID: %d", controller_id);
@@ -595,18 +646,18 @@ void settings_ui_init(lv_ui *ui) {
     lv_obj_add_event_cb(settings_controller_id_slider, controller_id_slider_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
     
     y_pos += spacing;
-    
+    */
     // ========== Reset Button ==========
     settings_reset_button = lv_btn_create(ui->settings);
     lv_obj_t *reset_label = lv_label_create(settings_reset_button);
     lv_label_set_text(reset_label, "Reset to Defaults");
     lv_obj_align(reset_label, LV_ALIGN_CENTER, 0, 0);
     lv_obj_set_pos(settings_reset_button, 20, y_pos);
-    lv_obj_set_size(settings_reset_button, 440, 40);
+    lv_obj_set_size(settings_reset_button, 440, 50); // Match height with other elements
     lv_obj_set_style_bg_color(settings_reset_button, lv_color_hex(0xff4444), 0);
     lv_obj_set_style_text_color(settings_reset_button, lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_text_font(settings_reset_button, &lv_font_montserratMedium_16, 0);
-    lv_obj_set_style_radius(settings_reset_button, 5, 0);
+    lv_obj_set_style_radius(settings_reset_button, 8, 0); // Match radius with other elements
     lv_obj_set_style_border_width(settings_reset_button, 0, 0);
     lv_obj_add_event_cb(settings_reset_button, reset_button_event_cb, LV_EVENT_CLICKED, NULL);
     

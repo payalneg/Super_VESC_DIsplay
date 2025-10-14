@@ -1,0 +1,83 @@
+===============================================================================
+  SUPER VESC DISPLAY - SETTINGS SYSTEM USAGE EXAMPLES
+===============================================================================
+
+AVAILABLE SETTINGS:
+  1. Target VESC ID (1-254)        - Target VESC for RT data requests
+  2. CAN Speed (125/250/500/1000)  - CAN bus speed in kbps
+  3. Screen Brightness (0-100)     - Display backlight brightness %
+  4. Controller ID (1-254)         - This device's CAN ID
+
+===============================================================================
+  METHOD 1: BLE COMMANDS (Real-time control)
+===============================================================================
+
+Send these text commands via BLE (SuperVESCDisplay):
+
+  GET_SETTINGS              - Get current settings
+  SET_TARGET_ID:10          - Set target VESC ID to 10
+  SET_CAN_SPEED:500         - Set CAN speed to 500 kbps
+  SET_BRIGHTNESS:80         - Set screen brightness to 80%
+  SET_CONTROLLER_ID:2       - Set controller ID to 2
+  RESET_SETTINGS            - Reset all settings to defaults
+
+Note: CAN speed and Controller ID require restart to take effect!
+
+===============================================================================
+  METHOD 2: C++ API (For code integration)
+===============================================================================
+
+#include "settings.h"
+
+// Initialize settings (called once at startup)
+settings_init();
+
+// Get current settings
+uint8_t target_id = settings_get_target_vesc_id();
+can_speed_t speed = settings_get_can_speed();
+uint8_t brightness = settings_get_screen_brightness();
+uint8_t controller = settings_get_controller_id();
+
+// Set settings (automatically saves to NVS)
+settings_set_target_vesc_id(10);
+settings_set_can_speed(CAN_SPEED_500_KBPS);
+settings_set_screen_brightness(80);
+settings_set_controller_id(2);
+
+// Apply settings to hardware
+settings_apply_brightness();  // Apply immediately
+
+// Reset to defaults
+settings_reset_to_defaults();
+
+===============================================================================
+  DEFAULT VALUES
+===============================================================================
+
+  Target VESC ID:     10
+  CAN Speed:          250 kbps
+  Screen Brightness:  80%
+  Controller ID:      2
+
+===============================================================================
+  STORAGE
+===============================================================================
+
+Settings are automatically saved to ESP32 NVS (Non-Volatile Storage).
+They persist across reboots and power cycles.
+
+===============================================================================
+  LOGGING
+===============================================================================
+
+All settings changes are logged via debug_log system:
+  - Settings initialization
+  - Load from NVS
+  - Save to NVS
+  - Validation warnings
+  - Settings changes
+
+Check serial output for detailed logs.
+
+===============================================================================
+
