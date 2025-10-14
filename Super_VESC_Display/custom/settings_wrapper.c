@@ -23,11 +23,15 @@ static struct {
     uint8_t can_speed_index;
     uint8_t brightness;
     uint8_t controller_id;
+    float battery_capacity;
+    uint8_t battery_calc_mode;
 } sim_settings = {
     .target_vesc_id = 10,
     .can_speed_index = 3,  // 1000 kbps
     .brightness = 80,
-    .controller_id = 255
+    .controller_id = 255,
+    .battery_capacity = 15.0f,
+    .battery_calc_mode = 0  // Direct
 };
 #endif
 
@@ -77,6 +81,22 @@ uint8_t settings_wrapper_get_controller_id(void) {
 #endif
 }
 
+float settings_wrapper_get_battery_capacity(void) {
+#if SIMULATOR_MODE
+    return sim_settings.battery_capacity;
+#else
+    return settings_get_battery_capacity();
+#endif
+}
+
+uint8_t settings_wrapper_get_battery_calc_mode(void) {
+#if SIMULATOR_MODE
+    return sim_settings.battery_calc_mode;
+#else
+    return (uint8_t)settings_get_battery_calc_mode();
+#endif
+}
+
 void settings_wrapper_set_target_vesc_id(uint8_t id) {
 #if SIMULATOR_MODE
     sim_settings.target_vesc_id = id;
@@ -115,6 +135,22 @@ void settings_wrapper_set_controller_id(uint8_t id) {
     sim_settings.controller_id = id;
 #else
     settings_set_controller_id(id);
+#endif
+}
+
+void settings_wrapper_set_battery_capacity(float capacity) {
+#if SIMULATOR_MODE
+    sim_settings.battery_capacity = capacity;
+#else
+    settings_set_battery_capacity(capacity);
+#endif
+}
+
+void settings_wrapper_set_battery_calc_mode(uint8_t mode) {
+#if SIMULATOR_MODE
+    sim_settings.battery_calc_mode = mode;
+#else
+    settings_set_battery_calc_mode((battery_calc_mode_t)mode);
 #endif
 }
 

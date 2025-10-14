@@ -8,6 +8,7 @@
 #include "Display_ST7701.h"
 #include "comm_can.h"
 #include "debug_log.h"
+#include "vesc_battery_calc.h"
 #include <Preferences.h>
 
 // NVS namespace for settings
@@ -18,12 +19,16 @@
 #define KEY_CAN_SPEED         "can_speed"
 #define KEY_BRIGHTNESS        "brightness"
 #define KEY_CONTROLLER_ID     "controller_id"
+#define KEY_BATTERY_CAPACITY  "bat_capacity"
+#define KEY_BATTERY_CALC_MODE "bat_calc_mode"
 
 // Default settings
 #define DEFAULT_TARGET_VESC_ID      10
 #define DEFAULT_CAN_SPEED           CAN_SPEED_1000_KBPS
 #define DEFAULT_BRIGHTNESS          80
 #define DEFAULT_CONTROLLER_ID       255 //DO NOT CHANGE PLEASE
+#define DEFAULT_BATTERY_CAPACITY    15.0f
+#define DEFAULT_BATTERY_CALC_MODE   BATTERY_CALC_DIRECT
 
 // Global settings storage
 static device_settings_t g_settings;
@@ -46,13 +51,16 @@ void settings_init(void) {
     g_settings.can_speed = DEFAULT_CAN_SPEED;
     g_settings.screen_brightness = DEFAULT_BRIGHTNESS;
     g_settings.controller_id = DEFAULT_CONTROLLER_ID;
+    g_settings.battery_capacity = DEFAULT_BATTERY_CAPACITY;
+    g_settings.battery_calc_mode = DEFAULT_BATTERY_CALC_MODE;
     
     // Load from NVS
     settings_load();
     
     settings_initialized = true;
-    LOG_INFO(SYSTEM, "Settings initialized: Target ID=%d, CAN Speed=%d kbps, Brightness=%d%%, Controller ID=%d", 
-             g_settings.target_vesc_id, (int)g_settings.can_speed, g_settings.screen_brightness, g_settings.controller_id);
+    LOG_INFO(SYSTEM, "Settings initialized: Target ID=%d, CAN Speed=%d kbps, Brightness=%d%%, Controller ID=%d, Battery Capacity=%.1f Ah, Calc Mode=%d", 
+             g_settings.target_vesc_id, (int)g_settings.can_speed, g_settings.screen_brightness, g_settings.controller_id,
+             g_settings.battery_capacity, g_settings.battery_calc_mode);
 }
 
 // Load settings from NVS
@@ -67,6 +75,8 @@ void settings_load(void) {
     g_settings.can_speed = (can_speed_t)preferences.getUInt(KEY_CAN_SPEED, DEFAULT_CAN_SPEED);
     g_settings.screen_brightness = preferences.getUChar(KEY_BRIGHTNESS, DEFAULT_BRIGHTNESS);
     g_settings.controller_id = preferences.getUChar(KEY_CONTROLLER_ID, DEFAULT_CONTROLLER_ID);
+    g_settings.battery_capacity = preferences.getFloat(KEY_BATTERY_CAPACITY, DEFAULT_BATTERY_CAPACITY);
+    g_settings.battery_calc_mode = (battery_calc_mode_t)preferences.getUChar(KEY_BATTERY_CALC_MODE, DEFAULT_BATTERY_CALC_MODE);
     
     preferences.end();
     
@@ -84,6 +94,18 @@ void settings_load(void) {
     if (g_settings.controller_id == 0 || g_settings.controller_id > 254) {
         LOG_WARN(SYSTEM, "Invalid controller ID %d, using default %d", g_settings.controller_id, DEFAULT_CONTROLLER_ID);
         g_settings.controller_id = DEFAULT_CONTROLLER_ID;
+    }
+    
+    // Validate battery capacity
+    if (g_settings.battery_capacity < 1.0f || g_settings.battery_capacity > 200.0f) {
+        LOG_WARN(SYSTEM, "Invalid battery capacity %.1f, using default %.1f", g_settings.battery_capacity, DEFAULT_BATTERY_CAPACITY);
+        g_settings.battery_capacity = DEFAULT_BATTERY_CAPACITY;
+    }
+    
+    // Validate battery calculation mode
+    if (g_settings.battery_calc_mode != BATTERY_CALC_DIRECT && g_settings.battery_calc_mode != BATTERY_CALC_SMART) {
+        LOG_WARN(SYSTEM, "Invalid battery calc mode %d, using default %d", g_settings.battery_calc_mode, DEFAULT_BATTERY_CALC_MODE);
+        g_settings.battery_calc_mode = DEFAULT_BATTERY_CALC_MODE;
     }
     
     // Validate CAN speed
@@ -109,6 +131,8 @@ void settings_save(void) {
     preferences.putUInt(KEY_CAN_SPEED, (uint32_t)g_settings.can_speed);
     preferences.putUChar(KEY_BRIGHTNESS, g_settings.screen_brightness);
     preferences.putUChar(KEY_CONTROLLER_ID, g_settings.controller_id);
+    preferences.putFloat(KEY_BATTERY_CAPACITY, g_settings.battery_capacity);
+    preferences.putUChar(KEY_BATTERY_CALC_MODE, (uint8_t)g_settings.battery_calc_mode);
     
     preferences.end();
     
@@ -123,6 +147,8 @@ void settings_reset_to_defaults(void) {
     g_settings.can_speed = DEFAULT_CAN_SPEED;
     g_settings.screen_brightness = DEFAULT_BRIGHTNESS;
     g_settings.controller_id = DEFAULT_CONTROLLER_ID;
+    g_settings.battery_capacity = DEFAULT_BATTERY_CAPACITY;
+    g_settings.battery_calc_mode = DEFAULT_BATTERY_CALC_MODE;
     
     settings_save();
     LOG_INFO(SYSTEM, "Settings reset to defaults");
@@ -143,6 +169,14 @@ uint8_t settings_get_screen_brightness(void) {
 
 uint8_t settings_get_controller_id(void) {
     return g_settings.controller_id;
+}
+
+float settings_get_battery_capacity(void) {
+    return g_settings.battery_capacity;
+}
+
+battery_calc_mode_t settings_get_battery_calc_mode(void) {
+    return g_settings.battery_calc_mode;
 }
 
 // Setters
@@ -198,6 +232,33 @@ void settings_set_controller_id(uint8_t id) {
     
     // Reinitialize CAN with new controller ID
     comm_can_reinit(id, (int)g_settings.can_speed);
+}
+
+void settings_set_battery_capacity(float capacity) {
+    if (capacity < 1.0f || capacity > 200.0f) {
+        LOG_WARN(SYSTEM, "Invalid battery capacity %.1f (must be 1.0-200.0)", capacity);
+        return;
+    }
+    
+    g_settings.battery_capacity = capacity;
+    settings_save();
+    
+    // Notify battery calculation module that capacity changed (will reset on next calculation)
+    battery_calc_capacity_changed();
+    
+    LOG_INFO(SYSTEM, "Battery capacity set to %.1f Ah (battery calc will reset)", capacity);
+}
+
+void settings_set_battery_calc_mode(battery_calc_mode_t mode) {
+    if (mode != BATTERY_CALC_DIRECT && mode != BATTERY_CALC_SMART) {
+        LOG_WARN(SYSTEM, "Invalid battery calc mode %d", mode);
+        return;
+    }
+    
+    g_settings.battery_calc_mode = mode;
+    settings_save();
+    LOG_INFO(SYSTEM, "Battery calculation mode set to %s", 
+             mode == BATTERY_CALC_SMART ? "Smart Calculation" : "Direct from Controller");
 }
 
 // Apply brightness to hardware

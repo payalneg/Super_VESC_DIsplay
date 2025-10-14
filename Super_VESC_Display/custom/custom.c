@@ -46,6 +46,12 @@ static lv_obj_t *settings_brightness_slider = NULL;
 static lv_obj_t *settings_brightness_label = NULL;
 static lv_obj_t *settings_controller_id_slider = NULL;
 static lv_obj_t *settings_controller_id_label = NULL;
+static lv_obj_t *settings_battery_capacity_spinbox = NULL;
+static lv_obj_t *settings_battery_capacity_label = NULL;
+static lv_obj_t *settings_battery_capacity_plus_btn = NULL;
+static lv_obj_t *settings_battery_capacity_minus_btn = NULL;
+static lv_obj_t *settings_battery_calc_mode_dropdown = NULL;
+static lv_obj_t *settings_battery_calc_mode_label = NULL;
 static lv_obj_t *settings_reset_button = NULL;
 static lv_obj_t *settings_info_label = NULL;
 /**
@@ -468,6 +474,65 @@ static void controller_id_slider_event_cb(lv_event_t *e) {
     }
 }
 
+// Event handler for Battery Capacity spinbox
+static void battery_capacity_spinbox_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_VALUE_CHANGED) {
+        lv_obj_t *spinbox = lv_event_get_target(e);
+        int32_t value = lv_spinbox_get_value(spinbox);
+        
+        // Value is stored as integer (e.g., 150 for 15.0 Ah)
+        float capacity = (float)value / 10.0f;
+        
+        // Save to settings (this will trigger battery calc reset)
+        settings_wrapper_set_battery_capacity(capacity);
+        
+        // Update info label
+        lv_label_set_text(settings_info_label, "Battery capacity changed - will recalibrate!");
+    }
+}
+
+// Event handler for Battery Capacity Plus button
+static void battery_capacity_plus_btn_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED) {
+        int32_t current_value = lv_spinbox_get_value(settings_battery_capacity_spinbox);
+        if (current_value < 2000) { // Max 200.0 Ah
+            lv_spinbox_increment(settings_battery_capacity_spinbox);
+        }
+    }
+}
+
+// Event handler for Battery Capacity Minus button
+static void battery_capacity_minus_btn_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED) {
+        int32_t current_value = lv_spinbox_get_value(settings_battery_capacity_spinbox);
+        if (current_value > 10) { // Min 1.0 Ah
+            lv_spinbox_decrement(settings_battery_capacity_spinbox);
+        }
+    }
+}
+
+// Event handler for Battery Calculation Mode dropdown
+static void battery_calc_mode_dropdown_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_VALUE_CHANGED) {
+        lv_obj_t *dropdown = lv_event_get_target(e);
+        uint16_t selected = lv_dropdown_get_selected(dropdown);
+        
+        // Save to settings
+        settings_wrapper_set_battery_calc_mode((uint8_t)selected);
+        
+        // Update info label
+        if (selected == 1) { // Smart Calculation
+            lv_label_set_text(settings_info_label, "Smart calc enabled - will calibrate on next data!");
+        } else {
+            lv_label_set_text(settings_info_label, "Direct mode - using controller battery level");
+        }
+    }
+}
+
 // Event handler for Reset button
 static void reset_button_event_cb(lv_event_t *e) {
     lv_event_code_t code = lv_event_get_code(e);
@@ -477,6 +542,8 @@ static void reset_button_event_cb(lv_event_t *e) {
         settings_wrapper_set_can_speed_index(3); // 1000 kbps
         settings_wrapper_set_brightness(80);
         settings_wrapper_set_controller_id(2);
+        settings_wrapper_set_battery_capacity(15.0f);
+        settings_wrapper_set_battery_calc_mode(0); // Direct
         
         // Update UI elements
         if (settings_target_id_spinbox) {
@@ -490,6 +557,12 @@ static void reset_button_event_cb(lv_event_t *e) {
         }
         if (settings_controller_id_slider) {
             lv_slider_set_value(settings_controller_id_slider, 2, LV_ANIM_ON);
+        }
+        if (settings_battery_capacity_spinbox) {
+            lv_spinbox_set_value(settings_battery_capacity_spinbox, 150); // 15.0 Ah
+        }
+        if (settings_battery_calc_mode_dropdown) {
+            lv_dropdown_set_selected(settings_battery_calc_mode_dropdown, 0);
         }
         
         // Update info
@@ -516,6 +589,8 @@ void settings_ui_init(lv_ui *ui) {
     uint8_t can_speed_idx = settings_wrapper_get_can_speed_index();
     uint8_t brightness = settings_wrapper_get_brightness();
     uint8_t controller_id = settings_wrapper_get_controller_id();
+    float battery_capacity = settings_wrapper_get_battery_capacity();
+    uint8_t battery_calc_mode = settings_wrapper_get_battery_calc_mode();
     
     int y_pos = 70; // Start below "Back to dashboard" button
     int spacing = 90;
@@ -596,6 +671,83 @@ void settings_ui_init(lv_ui *ui) {
     lv_obj_set_style_border_width(settings_can_speed_dropdown, 0, 0);
     lv_obj_set_style_radius(settings_can_speed_dropdown, 8, 0); // Match radius with other elements
     lv_obj_add_event_cb(settings_can_speed_dropdown, can_speed_dropdown_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    
+    y_pos += spacing + 10;
+    
+    // ========== Battery Capacity Spinbox ==========
+    settings_battery_capacity_label = lv_label_create(ui->settings);
+    lv_label_set_text(settings_battery_capacity_label, "Battery Capacity (Ah):");
+    lv_obj_set_pos(settings_battery_capacity_label, 20, y_pos);
+    lv_obj_set_style_text_color(settings_battery_capacity_label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_battery_capacity_label, &lv_font_montserrat_16, 0);
+    
+    // Create Minus button (left side)
+    settings_battery_capacity_minus_btn = lv_btn_create(ui->settings);
+    lv_obj_t *bat_minus_label = lv_label_create(settings_battery_capacity_minus_btn);
+    lv_label_set_text(bat_minus_label, "-");
+    lv_obj_align(bat_minus_label, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_pos(settings_battery_capacity_minus_btn, 20, y_pos + 30);
+    lv_obj_set_size(settings_battery_capacity_minus_btn, 100, 50);
+    lv_obj_set_style_bg_color(settings_battery_capacity_minus_btn, lv_color_hex(0xff4444), 0);
+    lv_obj_set_style_text_color(settings_battery_capacity_minus_btn, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_battery_capacity_minus_btn, &lv_font_montserrat_24, 0);
+    lv_obj_set_style_radius(settings_battery_capacity_minus_btn, 8, 0);
+    lv_obj_set_style_border_width(settings_battery_capacity_minus_btn, 0, 0);
+    lv_obj_add_event_cb(settings_battery_capacity_minus_btn, battery_capacity_minus_btn_event_cb, LV_EVENT_CLICKED, NULL);
+    
+    // Create spinbox for Battery Capacity (center)
+    settings_battery_capacity_spinbox = lv_spinbox_create(ui->settings);
+    lv_spinbox_set_range(settings_battery_capacity_spinbox, 10, 2000); // 1.0 to 200.0 Ah
+    lv_spinbox_set_digit_format(settings_battery_capacity_spinbox, 4, 1); // 4 digits, 1 decimal place (e.g., "15.0")
+    lv_spinbox_set_value(settings_battery_capacity_spinbox, (int32_t)(battery_capacity * 10.0f));
+    lv_spinbox_set_step(settings_battery_capacity_spinbox, 1); // 0.1 Ah steps
+    lv_obj_set_pos(settings_battery_capacity_spinbox, 190, y_pos + 30);
+    lv_obj_set_size(settings_battery_capacity_spinbox, 100, 50);
+    
+    // Style the spinbox
+    lv_obj_set_style_bg_color(settings_battery_capacity_spinbox, lv_color_hex(0x1f1f1f), LV_PART_MAIN);
+    lv_obj_set_style_text_color(settings_battery_capacity_spinbox, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+    lv_obj_set_style_text_font(settings_battery_capacity_spinbox, &lv_font_montserrat_24, LV_PART_MAIN);
+    lv_obj_set_style_border_width(settings_battery_capacity_spinbox, 1, LV_PART_MAIN);
+    lv_obj_set_style_border_color(settings_battery_capacity_spinbox, lv_color_hex(0xffa500), LV_PART_MAIN);
+    lv_obj_set_style_radius(settings_battery_capacity_spinbox, 8, LV_PART_MAIN);
+    
+    lv_obj_add_event_cb(settings_battery_capacity_spinbox, battery_capacity_spinbox_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    
+    // Create Plus button (right side)
+    settings_battery_capacity_plus_btn = lv_btn_create(ui->settings);
+    lv_obj_t *bat_plus_label = lv_label_create(settings_battery_capacity_plus_btn);
+    lv_label_set_text(bat_plus_label, "+");
+    lv_obj_align(bat_plus_label, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_pos(settings_battery_capacity_plus_btn, 360, y_pos + 30);
+    lv_obj_set_size(settings_battery_capacity_plus_btn, 100, 50);
+    lv_obj_set_style_bg_color(settings_battery_capacity_plus_btn, lv_color_hex(0x00a9ff), 0);
+    lv_obj_set_style_text_color(settings_battery_capacity_plus_btn, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_battery_capacity_plus_btn, &lv_font_montserrat_24, 0);
+    lv_obj_set_style_radius(settings_battery_capacity_plus_btn, 8, 0);
+    lv_obj_set_style_border_width(settings_battery_capacity_plus_btn, 0, 0);
+    lv_obj_add_event_cb(settings_battery_capacity_plus_btn, battery_capacity_plus_btn_event_cb, LV_EVENT_CLICKED, NULL);
+    
+    y_pos += spacing;
+    
+    // ========== Battery Calculation Mode Dropdown ==========
+    settings_battery_calc_mode_label = lv_label_create(ui->settings);
+    lv_label_set_text(settings_battery_calc_mode_label, "Battery Calculation:");
+    lv_obj_set_pos(settings_battery_calc_mode_label, 20, y_pos);
+    lv_obj_set_style_text_color(settings_battery_calc_mode_label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_battery_calc_mode_label, &lv_font_montserrat_16, 0);
+    
+    settings_battery_calc_mode_dropdown = lv_dropdown_create(ui->settings);
+    lv_dropdown_set_options(settings_battery_calc_mode_dropdown, "Direct from Controller\nSmart Calculation");
+    lv_dropdown_set_selected(settings_battery_calc_mode_dropdown, battery_calc_mode);
+    lv_obj_set_pos(settings_battery_calc_mode_dropdown, 20, y_pos + 30);
+    lv_obj_set_size(settings_battery_calc_mode_dropdown, 440, 50);
+    lv_obj_set_style_bg_color(settings_battery_calc_mode_dropdown, lv_color_hex(0x2a3440), 0);
+    lv_obj_set_style_text_color(settings_battery_calc_mode_dropdown, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_battery_calc_mode_dropdown, &lv_font_montserrat_24, 0);
+    lv_obj_set_style_border_width(settings_battery_calc_mode_dropdown, 0, 0);
+    lv_obj_set_style_radius(settings_battery_calc_mode_dropdown, 8, 0);
+    lv_obj_add_event_cb(settings_battery_calc_mode_dropdown, battery_calc_mode_dropdown_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
     
     y_pos += spacing + 10;
     

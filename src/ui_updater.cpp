@@ -7,6 +7,8 @@
 
 #include "ui_updater.h"
 #include "vesc_rt_data.h"
+#include "vesc_battery_calc.h"
+#include "dev_settings.h"
 #include "debug_log.h"
 #include "ble_vesc_driver.h"
 #include <Arduino.h>
@@ -30,6 +32,9 @@ static int current_fps = 0;                 // Current FPS value
 void ui_updater_init(void) {
 	ui_updater_active = false;
 	last_update_time = 0;
+	
+	// Initialize battery calculation module
+	battery_calc_init();
 	
 	LOG_INFO(UI, "UI updater initialized (manual mode)");
 }
@@ -86,8 +91,19 @@ void ui_updater_update(void) {
 	// Current (A) - positive = discharge, negative = regen
 	update_current(rt->current_in);
 	
-	// Battery level (0-100%)
-	float battery_percent = rt->battery_level * 100.0f;
+	// Battery level (0-100%) - use smart calculation or direct from controller
+	float battery_percent;
+	battery_calc_mode_t calc_mode = settings_get_battery_calc_mode();
+	
+	if (calc_mode == BATTERY_CALC_SMART) {
+		// Smart calculation based on capacity and amp-hours
+		float battery_capacity = settings_get_battery_capacity();
+		battery_percent = battery_calc_get_smart_percentage(rt->battery_level, rt->amp_hours, battery_capacity);
+	} else {
+		// Direct from controller
+		battery_percent = rt->battery_level * 100.0f;
+	}
+	
 	update_battery_proc(battery_percent);
 	
 	// Trip distance (km)

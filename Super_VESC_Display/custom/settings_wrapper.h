@@ -22,17 +22,27 @@ typedef enum {
     CAN_SPEED_1000 = 3
 } can_speed_option_t;
 
+// Battery calculation mode options
+typedef enum {
+    BATTERY_CALC_MODE_DIRECT = 0,    // Direct from controller
+    BATTERY_CALC_MODE_SMART = 1      // Smart calculation
+} battery_calc_mode_option_t;
+
 // Wrapper functions for simulator compatibility
 void settings_wrapper_init(void);
 uint8_t settings_wrapper_get_target_vesc_id(void);
 uint8_t settings_wrapper_get_can_speed_index(void);
 uint8_t settings_wrapper_get_brightness(void);
 uint8_t settings_wrapper_get_controller_id(void);
+float settings_wrapper_get_battery_capacity(void);
+uint8_t settings_wrapper_get_battery_calc_mode(void);
 
 void settings_wrapper_set_target_vesc_id(uint8_t id);
 void settings_wrapper_set_can_speed_index(uint8_t index);
 void settings_wrapper_set_brightness(uint8_t brightness);
 void settings_wrapper_set_controller_id(uint8_t id);
+void settings_wrapper_set_battery_capacity(float capacity);
+void settings_wrapper_set_battery_calc_mode(uint8_t mode);
 
 // Utility function
 int settings_wrapper_can_speed_to_kbps(uint8_t index);
