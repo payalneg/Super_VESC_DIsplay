@@ -73,6 +73,9 @@ uint8_t LCD_Backlight = 50;
 
 void Backlight_Init()
 {
+  //No backlight on this display
+  return;
+
   ledcAttachPin(LCD_Backlight_PIN, PWM_Channel);
   ledcSetup(PWM_Channel, Frequency, Resolution);   
   ledcWrite(PWM_Channel, Dutyfactor);  
@@ -81,6 +84,8 @@ void Backlight_Init()
 
 void Set_Backlight(uint8_t Light)                     
 {
+  //No backlight on this display
+  return;
   if(Light > Backlight_MAX || Light < 0) {
     printf("Set Backlight parameters in the range of 0 to 100 \r\n");
   } else {

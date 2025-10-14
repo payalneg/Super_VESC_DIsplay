@@ -4982,7 +4982,7 @@
 					"left": 16,
 					"top": 15,
 					"visible": true,
-					"isLock": true,
+					"isLock": false,
 					"flag": [],
 					"width": 450,
 					"height": 40,

@@ -3,6 +3,10 @@
 
 #include <Arduino.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // CAN Speed options (in kbps)
 typedef enum {
     CAN_SPEED_125_KBPS = 125,
@@ -43,5 +47,9 @@ bool settings_apply_can_speed(void);  // Returns true if CAN restart needed
 
 // Legacy compatibility
 extern const uint8_t target_vesc_id;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
