@@ -14,6 +14,7 @@ int MTU_SIZE = 23;
 int PACKET_SIZE = MTU_SIZE - 3;
 bool deviceConnected = false;
 bool oldDeviceConnected = false;
+bool bleNotificationsSubscribed = false;
 
 // BLE Objects
 static NimBLEServer *pServer = nullptr;
@@ -44,6 +45,7 @@ void MyServerCallbacks::onDisconnect(NimBLEServer *pServer)
 {
   LOG_INFO(BLE, "🔵 Client disconnected");
   deviceConnected = false;
+  bleNotificationsSubscribed = false; // Reset subscription flag on disconnect
   
   NimBLEDevice::startAdvertising();
 }
@@ -59,6 +61,8 @@ void MyServerCallbacks::onMTUChange(uint16_t MTU, ble_gap_conn_desc *desc)
 // Track if we're waiting for a CAN response to forward to BLE (used in Bridge mode)
 static bool waiting_for_can_response = false;
 static uint8_t expected_response_vesc_id = 255;
+static unsigned long last_command_time = 0;
+#define COMMAND_TIMEOUT_MS 10000  // 10 seconds for long operations like hall detection
 
 // Packet processed callback - called when valid packet is parsed from BLE
 void BLE_OnPacketParsed(uint8_t* data, uint16_t len) {
@@ -79,7 +83,18 @@ void BLE_OnPacketParsed(uint8_t* data, uint16_t len) {
   //          Parser extracts: data[0]=0x11 (payload), len=1
   //          0x11 = 17 = CAN_PACKET_PING
   
-  LOG_HEX(BLE, data, len, "📦 BLE→CAN: Received payload: ");
+  // Log command type for debugging
+  const char* cmd_name = "UNKNOWN";
+  switch (data[0]) {
+    case 0: cmd_name = "FW_VERSION"; break;
+    case 4: cmd_name = "GET_VALUES"; break;
+    case 28: cmd_name = "DETECT_HALL_FOC"; break;
+    case 24: cmd_name = "DETECT_MOTOR_PARAM"; break;
+    case 25: cmd_name = "DETECT_MOTOR_R_L"; break;
+    case 27: cmd_name = "DETECT_ENCODER"; break;
+  }
+  LOG_INFO(BLE, "📦 BLE→CAN: Command 0x%02X (%s), len=%d", data[0], cmd_name, len);
+  LOG_HEX(BLE, data, len, "");
   
   // Forward entire payload to CAN bus
   // comm_can_send_buffer handles:
@@ -89,8 +104,9 @@ void BLE_OnPacketParsed(uint8_t* data, uint16_t len) {
   
   waiting_for_can_response = true;
   expected_response_vesc_id = settings_get_target_vesc_id();
+  last_command_time = millis();
   
-  LOG_DEBUG(BLE, "🔄 BLE→CAN: Forwarding to CAN bus (broadcast to all VESCs)");
+  LOG_DEBUG(BLE, "🔄 Forwarding to VESC ID %d via CAN bus", expected_response_vesc_id);
   
   // send_type = 0: commands_send (wait for response and send it back)
   comm_can_send_buffer(settings_get_target_vesc_id(), data, len, 0);
@@ -117,6 +133,21 @@ void MyCallbacks::onWrite(BLECharacteristic *pCharacteristic)
           LOG_DEBUG(BLE, "✅ Packet successfully parsed and processed");
         }
       }
+    }
+  }
+}
+
+void MyCallbacks::onSubscribe(NimBLECharacteristic* pCharacteristic, ble_gap_conn_desc* desc, uint16_t subValue)
+{
+  // subValue: 0 = unsubscribed, 1 = notify, 2 = indicate, 3 = notify+indicate
+  if (pCharacteristic->getUUID().equals(pCharacteristicVescTx->getUUID()))
+  {
+    if (subValue > 0) {
+      bleNotificationsSubscribed = true;
+      LOG_INFO(BLE, "🔔 Client subscribed to notifications - device RT data requests paused");
+    } else {
+      bleNotificationsSubscribed = false;
+      LOG_INFO(BLE, "🔕 Client unsubscribed from notifications - device RT data requests resumed");
     }
   }
 }
@@ -150,6 +181,7 @@ bool BLE_Init() {
             NIMBLE_PROPERTY::WRITE_NR);
 
     pCharacteristicVescRx->setCallbacks(new MyCallbacks());
+    pCharacteristicVescTx->setCallbacks(new MyCallbacks());
 
     // Start the VESC service
     pService->start();
@@ -181,6 +213,10 @@ bool BLE_Init() {
 // Check if BLE is connected
 bool BLE_IsConnected() {
   return deviceConnected;
+}
+
+bool BLE_IsSubscribed() {
+  return bleNotificationsSubscribed;
 }
 
 // Send VESC data via BLE (now sends both text and CAN format)
@@ -661,12 +697,33 @@ void BLE_SendFramedResponse(uint8_t* data, unsigned int len) {
 
 // CAN response handler - called when CAN response is received (Bridge mode only)
 void BLE_OnCANResponse(uint8_t* data, unsigned int len) {
-  // Only forward if we're waiting for a response and BLE is connected
-  if (!waiting_for_can_response || !deviceConnected || !pCharacteristicVescTx) {
+  // Check timeout
+  if (waiting_for_can_response && (millis() - last_command_time > COMMAND_TIMEOUT_MS)) {
+    LOG_WARN(BLE, "CAN response timeout, resetting flag");
+    waiting_for_can_response = false;
+  }
+  
+  // Only forward if BLE is connected (removed waiting_for_can_response check for better compatibility)
+  if (!deviceConnected || !pCharacteristicVescTx) {
     return;
   }
   vesc_rt_data_set_rx_time();
-  LOG_DEBUG(BLE, "📦 CAN→BLE: Received CAN response (%d bytes), forwarding to BLE", len);
+  
+  // Log response command type
+  const char* resp_name = "UNKNOWN";
+  if (len > 0) {
+    switch (data[0]) {
+      case 0: resp_name = "FW_VERSION"; break;
+      case 4: resp_name = "GET_VALUES"; break;
+      case 28: resp_name = "DETECT_HALL_FOC"; break;
+      case 24: resp_name = "DETECT_MOTOR_PARAM"; break;
+      case 25: resp_name = "DETECT_MOTOR_R_L"; break;
+      case 27: resp_name = "DETECT_ENCODER"; break;
+    }
+  }
+  LOG_INFO(BLE, "📦 CAN→BLE: Response 0x%02X (%s), len=%d, forwarding to BLE", 
+           len > 0 ? data[0] : 0, resp_name, len);
+  LOG_HEX(BLE, data, len > 16 ? 16 : len, "");
   
   // Forward the response to BLE with framing
   waiting_for_can_response = false; // Reset flag

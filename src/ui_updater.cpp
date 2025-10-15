@@ -140,9 +140,11 @@ void ui_updater_update(void) {
 	update_ble_status(ble_connected);
 	
 	// ESC connection status (check if RT data is fresh)
-	bool esc_connected = vesc_rt_data_is_fresh();
-	update_esc_connection_status(esc_connected);
-	
+	if (!BLE_IsSubscribed()) {
+		bool esc_connected = vesc_rt_data_is_fresh();
+
+		update_esc_connection_status(esc_connected);
+	}
 	// Debug log every 1 second (20 updates = 1 second at 50ms interval)
 	static uint32_t update_counter = 0;
 	update_counter++;

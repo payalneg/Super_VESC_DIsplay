@@ -28,7 +28,11 @@ void battery_calc_reset(float current_battery_percent, float battery_capacity);
 //   - controller_amp_hours: Amp-hours consumed from controller
 //   - battery_capacity: Total battery capacity in Ah
 // Returns: Calculated battery percentage (0.0-100.0)
-// Note: Automatically saves state to NVS and detects charging
+// Note: 
+//   - Reads controller percentage once at initialization
+//   - Continuously monitors controller percent for battery swap detection
+//   - Automatically resets remaining capacity when controller percent increases >1%
+//   - Saves state to NVS periodically
 float battery_calc_get_smart_percentage(float controller_battery_level, 
                                          float controller_amp_hours,
                                          float battery_capacity);

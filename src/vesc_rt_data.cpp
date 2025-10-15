@@ -12,6 +12,7 @@
 #include <Arduino.h>
 #include <string.h>
 #include "dev_settings.h"
+#include "ble_vesc_driver.h"
 
 // Range calculation mode:
 // 0 = VESC Tool original (uses full battery_wh capacity - shows range for full battery)
@@ -228,7 +229,7 @@ bool vesc_rt_data_is_fresh(void) {
 	if (!data_received) return false;
 	
 	uint32_t age_ms = millis() - rt_data.rx_time;
-	return age_ms < 2000; // Fresh if received within 2 seconds
+	return age_ms < 5000; // Fresh if received within 2 seconds
 }
 
 float vesc_rt_data_get_speed_kmh(void) {
@@ -284,6 +285,12 @@ float vesc_rt_data_get_efficiency_whkm(void) {
 // Call this periodically from main loop
 void vesc_rt_data_loop(void) {
 	if (!rt_data_active) return;
+	
+	// Don't request if BLE client is subscribed to notifications
+	// When subscribed, the client will request RT data via BLE commands
+	if (BLE_IsSubscribed()) {
+		return;
+	}
 	
 	uint32_t now = millis();
 	

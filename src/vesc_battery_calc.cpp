@@ -3,7 +3,14 @@
 	
 	Smart Battery Calculation Module
 	Calculates battery percentage based on capacity and amp-hours usage
-	with persistent state storage and automatic charging detection
+	with persistent state storage and automatic battery swap/charging detection.
+	
+	Features:
+	- Reads controller percentage once at initialization
+	- Continuously monitors controller percent for increases (battery swap detection)
+	- Automatically resets remaining capacity when new battery is detected (>1% increase)
+	- Persistent state storage in NVS
+	- Precise tracking based on actual amp-hours consumption
 */
 
 #include "vesc_battery_calc.h"
@@ -20,12 +27,13 @@
 // Threshold for detecting charging (percent difference)
 #define CHARGING_DETECT_THRESHOLD 10.0f  // If percent increased by >10%, assume charging happened
 
-// Battery calculation stateg
+// Battery calculation state
 static bool initialized = false;
 static float remaining_battery_ah = 0.0f;    // Current remaining capacity in Ah (persistent)
 static float last_saved_percent = 0.0f;      // Last saved battery percent for charging detection
 static float last_saved_capacity = 0.0f;     // Last saved battery capacity
 static float last_amp_hours = 0.0f;          // Last amp-hours reading from controller
+static float last_controller_percent = 0.0f; // Last controller percent for continuous monitoring
 static bool first_calculation = true;
 static bool capacity_changed_flag = false;   // Flag to reset on capacity change
 static uint32_t last_save_time = 0;          // For periodic NVS saves
@@ -97,9 +105,11 @@ void battery_calc_init(void) {
 
 void battery_calc_reset(float current_battery_percent, float battery_capacity) {
     // Reset to current reading from controller
-    remaining_battery_ah = (current_battery_percent / 100.0f) * battery_capacity;
+    //remaining_battery_ah = (current_battery_percent / 100.0f) * battery_capacity;
+    remaining_battery_ah = battery_capacity;
     last_saved_percent = current_battery_percent;
     last_saved_capacity = battery_capacity;
+    last_controller_percent = current_battery_percent;
     last_amp_hours = 0.0f;
     first_calculation = true;
     capacity_changed_flag = false;
@@ -133,7 +143,7 @@ float battery_calc_get_smart_percentage(float controller_battery_level,
         return current_controller_percent;
     }
     
-    // First-time initialization or check for charging
+    // First-time initialization
     if (!initialized || first_calculation) {
         if (initialized) {
             // We have saved state - check if battery was charged
@@ -141,7 +151,7 @@ float battery_calc_get_smart_percentage(float controller_battery_level,
             
             if (percent_diff > CHARGING_DETECT_THRESHOLD) {
                 // Battery was charged! Reset to controller reading
-                LOG_INFO(SYSTEM, "Charging detected! Saved: %.1f%%, Current: %.1f%% (diff: +%.1f%%) - resetting", 
+                LOG_INFO(SYSTEM, "Charging detected on startup! Saved: %.1f%%, Current: %.1f%% (diff: +%.1f%%) - resetting", 
                          last_saved_percent, current_controller_percent, percent_diff);
                 battery_calc_reset(current_controller_percent, battery_capacity);
                 return current_controller_percent;
@@ -149,6 +159,7 @@ float battery_calc_get_smart_percentage(float controller_battery_level,
                 // Continue from saved state
                 LOG_INFO(SYSTEM, "Continuing from saved state: %.2f Ah (saved: %.1f%%, current: %.1f%%)", 
                          remaining_battery_ah, last_saved_percent, current_controller_percent);
+                last_controller_percent = current_controller_percent;
                 first_calculation = false;
             }
         } else {
@@ -157,6 +168,19 @@ float battery_calc_get_smart_percentage(float controller_battery_level,
             return current_controller_percent;
         }
     }
+    
+    // Continuous monitoring: check if controller percent increased (battery swap detection)
+    float controller_percent_diff = current_controller_percent - last_controller_percent;
+    if (controller_percent_diff > CHARGING_DETECT_THRESHOLD) {
+        // Controller percent increased - battery was swapped or charged
+        LOG_INFO(SYSTEM, "Battery swap/charging detected! Previous controller: %.1f%%, Current: %.1f%% (diff: +%.1f%%) - resetting to full capacity", 
+                 last_controller_percent, current_controller_percent, controller_percent_diff);
+        battery_calc_reset(current_controller_percent, battery_capacity);
+        return current_controller_percent;
+    }
+    
+    // Update last controller percent for next comparison
+    last_controller_percent = current_controller_percent;
     
     // Calculate amp-hours consumed since last reading
     float amp_hours_consumed = controller_amp_hours - last_amp_hours;
