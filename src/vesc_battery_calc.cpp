@@ -20,7 +20,7 @@
 // Threshold for detecting charging (percent difference)
 #define CHARGING_DETECT_THRESHOLD 10.0f  // If percent increased by >10%, assume charging happened
 
-// Battery calculation state
+// Battery calculation stateg
 static bool initialized = false;
 static float remaining_battery_ah = 0.0f;    // Current remaining capacity in Ah (persistent)
 static float last_saved_percent = 0.0f;      // Last saved battery percent for charging detection

@@ -27,11 +27,6 @@ static bool rt_data_active = false;
 static uint32_t last_request_time = 0;
 static uint32_t request_interval_ms = 100; // Request all data every 50ms (20 Hz)
 
-// BLE RT data request management
-static bool ble_request_active = false;
-static uint32_t last_ble_request_time = 0;
-static const uint32_t BLE_REQUEST_TIMEOUT_MS = 2000; // 2 seconds timeout
-
 // target_vesc_id is defined in settings.cpp and declared in settings.h
 
 // SETUP_VALUES field bit positions (for selective request mask)
@@ -62,8 +57,6 @@ void vesc_rt_data_init(void) {
 	memset(&rt_data, 0, sizeof(rt_data));
 	data_received = false;
 	rt_data_active = false;
-	ble_request_active = false;
-	last_ble_request_time = 0;
 	LOG_INFO(VESC, "RT Data module initialized");
 }
 
@@ -288,38 +281,11 @@ float vesc_rt_data_get_efficiency_whkm(void) {
 	return wh_consumed / distance_km;
 }
 
-// BLE RT data request management functions
-void vesc_rt_data_set_ble_request_active(bool active) {
-	if (active) {
-		ble_request_active = true;
-		last_ble_request_time = millis();
-		LOG_DEBUG(VESC, "BLE RT data requests enabled - device requests paused");
-	} else {
-		ble_request_active = false;
-		LOG_DEBUG(VESC, "BLE RT data requests disabled - device requests resumed");
-	}
-}
-
-bool vesc_rt_data_is_ble_request_active(void) {
-	return ble_request_active;
-}
-
 // Call this periodically from main loop
 void vesc_rt_data_loop(void) {
 	if (!rt_data_active) return;
 	
 	uint32_t now = millis();
-	
-	// Check for BLE request timeout (auto-disable if no requests for 2 seconds)
-	if (ble_request_active && (now - last_ble_request_time > BLE_REQUEST_TIMEOUT_MS)) {
-		LOG_INFO(VESC, "BLE RT data request timeout - resuming device requests");
-		ble_request_active = false;
-	}
-	
-	// Don't request if BLE is actively requesting RT data
-	if (ble_request_active) {
-		return;
-	}
 	
 	// Request all RT data every 100ms
 	if (now - last_request_time >= request_interval_ms) {

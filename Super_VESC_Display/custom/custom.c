@@ -698,7 +698,7 @@ void settings_ui_init(lv_ui *ui) {
     // Create spinbox for Battery Capacity (center)
     settings_battery_capacity_spinbox = lv_spinbox_create(ui->settings);
     lv_spinbox_set_range(settings_battery_capacity_spinbox, 10, 2000); // 1.0 to 200.0 Ah
-    lv_spinbox_set_digit_format(settings_battery_capacity_spinbox, 4, 1); // 4 digits, 1 decimal place (e.g., "15.0")
+    lv_spinbox_set_digit_format(settings_battery_capacity_spinbox, 4, 3); // 4 digits, 1 decimal place (e.g., "15.0")
     lv_spinbox_set_value(settings_battery_capacity_spinbox, (int32_t)(battery_capacity * 10.0f));
     lv_spinbox_set_step(settings_battery_capacity_spinbox, 1); // 0.1 Ah steps
     lv_obj_set_pos(settings_battery_capacity_spinbox, 190, y_pos + 30);

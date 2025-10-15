@@ -45,9 +45,6 @@ void MyServerCallbacks::onDisconnect(NimBLEServer *pServer)
   LOG_INFO(BLE, "🔵 Client disconnected");
   deviceConnected = false;
   
-  // Reset BLE RT data request flag - resume device's automatic requests
-  vesc_rt_data_set_ble_request_active(false);
-  
   NimBLEDevice::startAdvertising();
 }
 
@@ -83,17 +80,6 @@ void BLE_OnPacketParsed(uint8_t* data, uint16_t len) {
   //          0x11 = 17 = CAN_PACKET_PING
   
   LOG_HEX(BLE, data, len, "📦 BLE→CAN: Received payload: ");
-  
-  // Check if this is an RT data request command
-  // If so, set flag to pause automatic device RT data requests
-  uint8_t cmd = data[0];
-  if (cmd == COMM_GET_VALUES ||              // 4
-      cmd == COMM_GET_VALUES_SETUP ||        // 47
-      cmd == COMM_GET_VALUES_SELECTIVE ||    // 50
-      cmd == COMM_GET_VALUES_SETUP_SELECTIVE) { // 51
-    // BLE is requesting RT data - pause device's automatic requests
-    vesc_rt_data_set_ble_request_active(true);
-  }
   
   // Forward entire payload to CAN bus
   // comm_can_send_buffer handles:

@@ -43,12 +43,5 @@ void vesc_rt_data_loop(void);
 // Set RX time
 void vesc_rt_data_set_rx_time(void);
 
-// BLE RT data request management
-// Call when BLE starts requesting RT data (disables automatic device requests)
-void vesc_rt_data_set_ble_request_active(bool active);
-
-// Check if BLE is actively requesting RT data
-bool vesc_rt_data_is_ble_request_active(void);
-
 #endif /* VESC_RT_DATA_H_ */
 
