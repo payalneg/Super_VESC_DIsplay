@@ -37,6 +37,10 @@
 #include "ble_config.h"              // BLE mode configuration
 #include "comm_can.h"                // VESC CAN implementation from vesc_express
 #include "ble_vesc_driver.h"         // BLE VESC Bridge
+#include "bluetooth_client.h"        // Bluetooth client for measurement devices
+#include "ble_keyboard.h"            // BLE keyboard functionality
+#include "ota_update.h"              // OTA update functionality
+#include "media_control.h"           // Media control and song display
 #include "buffer.h"                  // Buffer utility functions
 #include "datatypes.h"               // VESC data types
 #include "vesc_handler.h"            // VESC command handler
@@ -159,6 +163,34 @@ void setup()
     LOG_ERROR(SYSTEM, "BLE initialization failed");
   }
   
+  // Initialize Bluetooth client for measurement devices
+  if (bluetooth_client_init()) {
+    LOG_INFO(SYSTEM, "Bluetooth client initialized successfully");
+  } else {
+    LOG_ERROR(SYSTEM, "Bluetooth client initialization failed");
+  }
+  
+  // Initialize BLE keyboard
+  if (ble_keyboard_init()) {
+    LOG_INFO(SYSTEM, "BLE keyboard initialized successfully");
+  } else {
+    LOG_ERROR(SYSTEM, "BLE keyboard initialization failed");
+  }
+  
+  // Initialize OTA update module
+  if (ota_update_init()) {
+    LOG_INFO(SYSTEM, "OTA update module initialized successfully");
+  } else {
+    LOG_ERROR(SYSTEM, "OTA update module initialization failed");
+  }
+  
+  // Initialize media control
+  if (media_control_init()) {
+    LOG_INFO(SYSTEM, "Media control initialized successfully");
+  } else {
+    LOG_ERROR(SYSTEM, "Media control initialization failed");
+  }
+  
   // Initialize LVGL with dashboard (creates UI elements)
   Lvgl_Init();
   
@@ -183,6 +215,10 @@ void setup()
 void loop()
 {
   BLE_Loop();              // Process BLE communication
+  bluetooth_client_loop(); // Process Bluetooth client
+  ble_keyboard_loop();     // Process BLE keyboard
+  ota_update_loop();       // Process OTA updates
+  media_control_loop();    // Process media control
   if (millis() > 5000) {
     vesc_rt_data_loop();     // Process RT data requests
   }

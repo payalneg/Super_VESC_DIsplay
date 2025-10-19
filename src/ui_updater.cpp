@@ -172,3 +172,43 @@ void ui_updater_update_fps(void) {
 		fps_last_time = now;
 	}
 }
+
+// Media control UI update functions
+void update_current_song_title(const char* title) {
+	// Update current song title
+	// This might need a new UI element
+	LOG_DEBUG(UI, "Song title: %s", title ? title : "Unknown");
+}
+
+void update_current_song_artist(const char* artist) {
+	// Update current song artist
+	// This might need a new UI element
+	LOG_DEBUG(UI, "Song artist: %s", artist ? artist : "Unknown");
+}
+
+void update_current_song_album(const char* album) {
+	// Update current song album
+	// This might need a new UI element
+	LOG_DEBUG(UI, "Song album: %s", album ? album : "Unknown");
+}
+
+void update_playback_progress(uint32_t position_ms, uint32_t duration_ms) {
+	// Update playback progress bar
+	// This might need a new UI element
+	if (duration_ms > 0) {
+		float progress = (float)position_ms / (float)duration_ms * 100.0f;
+		LOG_DEBUG(UI, "Playback progress: %.1f%%", progress);
+	}
+}
+
+void update_playback_state(bool is_playing) {
+	// Update playback state (play/pause indicator)
+	// This might need a new UI element
+	LOG_DEBUG(UI, "Playback state: %s", is_playing ? "Playing" : "Paused");
+}
+
+void update_volume_level(uint8_t volume) {
+	// Update volume level
+	// This might need a new UI element
+	LOG_DEBUG(UI, "Volume: %d%%", volume);
+}

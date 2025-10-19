@@ -37,7 +37,12 @@
 #define LOG_PACKET_ENABLED  1
 #define LOG_VESC_ENABLED    0
 #define LOG_SYSTEM_ENABLED  1
-#define LOG_UI_ENABLED      1
+#define LOG_UI_ENABLED      0
+#define LOG_LIMITS_ENABLED  1
+#define LOG_BLE_CLIENT_ENABLED 1
+#define LOG_BLE_KEYBOARD_ENABLED 1
+#define LOG_MEDIA_ENABLED   1
+#define LOG_OTA_ENABLED     1
 
 // ============================================================================
 // LOGGING MACROS - DO NOT MODIFY BELOW THIS LINE

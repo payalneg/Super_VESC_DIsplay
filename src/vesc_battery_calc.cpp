@@ -40,40 +40,71 @@ static uint32_t last_save_time = 0;          // For periodic NVS saves
 static Preferences preferences;
 
 // Save current state to NVS
-static void battery_calc_save_state(float percent) {
+static void battery_calc_save_state() {
     if (!preferences.begin(BATTERY_CALC_NAMESPACE, false)) {
         LOG_ERROR(SYSTEM, "Failed to open battery calc NVS for writing");
         return;
     }
     
     preferences.putFloat(KEY_REMAINING_AH, remaining_battery_ah);
-    preferences.putFloat(KEY_LAST_PERCENT, percent);
     preferences.putFloat(KEY_LAST_CAPACITY, last_saved_capacity);
     preferences.end();
     
-    LOG_DEBUG(SYSTEM, "Battery state saved: %.2f Ah, %.1f%%", remaining_battery_ah, percent);
+    LOG_DEBUG(SYSTEM, "Battery state saved: %.2f Ah, %.1f%%", remaining_battery_ah);
 }
 
 // Load state from NVS
-static bool battery_calc_load_state(float *out_remaining_ah, float *out_last_percent, float *out_last_capacity) {
+static bool battery_calc_load_state() {
     if (!preferences.begin(BATTERY_CALC_NAMESPACE, true)) {
         LOG_WARN(SYSTEM, "Failed to open battery calc NVS for reading");
         return false;
     }
     
-    *out_remaining_ah = preferences.getFloat(KEY_REMAINING_AH, -1.0f);
-    *out_last_percent = preferences.getFloat(KEY_LAST_PERCENT, -1.0f);
-    *out_last_capacity = preferences.getFloat(KEY_LAST_CAPACITY, -1.0f);
+    remaining_battery_ah= preferences.getFloat(KEY_REMAINING_AH, -1.0f);
+    last_saved_capacity = preferences.getFloat(KEY_LAST_CAPACITY, -1.0f);
     preferences.end();
     
     // Check if valid data exists
-    if (*out_remaining_ah < 0.0f || *out_last_percent < 0.0f) {
+    if (remaining_battery_ah < 0.0f) {
         LOG_INFO(SYSTEM, "No previous battery state found");
         return false;
     }
     
-    LOG_INFO(SYSTEM, "Battery state loaded: %.2f Ah, %.1f%%, capacity: %.1f Ah", 
-             *out_remaining_ah, *out_last_percent, *out_last_capacity);
+    LOG_INFO(SYSTEM, "Battery state loaded: %.2f Ah, capacity: %.1f Ah", 
+             remaining_battery_ah, last_saved_capacity);
+    return true;
+}
+
+// Save current state to NVS
+static void battery_calc_save_percent() {
+    if (!preferences.begin(BATTERY_CALC_NAMESPACE, false)) {
+        LOG_ERROR(SYSTEM, "Failed to open battery calc NVS for writing");
+        return;
+    }
+    
+    preferences.putFloat(KEY_LAST_PERCENT, last_saved_percent);
+    preferences.end();
+    
+    LOG_DEBUG(SYSTEM, "Battery state saved: %.1f%%", last_saved_percent);
+}
+
+// Load state from NVS
+static bool battery_calc_load_percent() {
+    if (!preferences.begin(BATTERY_CALC_NAMESPACE, true)) {
+        LOG_WARN(SYSTEM, "Failed to open battery calc NVS for reading");
+        return false;
+    }
+    
+    last_saved_percent = preferences.getFloat(KEY_LAST_PERCENT, -1.0f);
+    preferences.end();
+    
+    // Check if valid data exists
+    if (last_saved_percent < 0.0f) {
+        LOG_INFO(SYSTEM, "No previous battery state found");
+        return false;
+    }
+    
+    LOG_INFO(SYSTEM, "Battery state loaded: %.1f%%", last_saved_percent);
     return true;
 }
 
@@ -83,10 +114,7 @@ void battery_calc_init(void) {
     float loaded_last_percent = 0.0f;
     float loaded_last_capacity = 0.0f;
     
-    if (battery_calc_load_state(&loaded_remaining_ah, &loaded_last_percent, &loaded_last_capacity)) {
-        remaining_battery_ah = loaded_remaining_ah;
-        last_saved_percent = loaded_last_percent;
-        last_saved_capacity = loaded_last_capacity;
+    if (battery_calc_load_state()) {
         initialized = true;
         LOG_INFO(SYSTEM, "Battery calculation module initialized with saved state");
     } else {
@@ -116,7 +144,7 @@ void battery_calc_reset(float current_battery_percent, float battery_capacity) {
     initialized = true;
     
     // Save to NVS immediately
-    battery_calc_save_state(current_battery_percent);
+    battery_calc_save_state();
     
     LOG_INFO(SYSTEM, "Battery calculation reset: %.1f%% = %.2f Ah of %.1f Ah capacity", 
              current_battery_percent, remaining_battery_ah, battery_capacity);
@@ -146,9 +174,11 @@ float battery_calc_get_smart_percentage(float controller_battery_level,
     // First-time initialization
     if (!initialized || first_calculation) {
         if (initialized) {
+            battery_calc_load_percent();
             // We have saved state - check if battery was charged
             float percent_diff = current_controller_percent - last_saved_percent;
-            
+            last_saved_percent = current_controller_percent;
+            battery_calc_save_percent();
             if (percent_diff > CHARGING_DETECT_THRESHOLD) {
                 // Battery was charged! Reset to controller reading
                 LOG_INFO(SYSTEM, "Charging detected on startup! Saved: %.1f%%, Current: %.1f%% (diff: +%.1f%%) - resetting", 
@@ -162,6 +192,7 @@ float battery_calc_get_smart_percentage(float controller_battery_level,
                 last_controller_percent = current_controller_percent;
                 first_calculation = false;
             }
+        
         } else {
             // No saved state - initialize from controller reading
             battery_calc_reset(current_controller_percent, battery_capacity);
@@ -169,6 +200,7 @@ float battery_calc_get_smart_percentage(float controller_battery_level,
         }
     }
     
+    /*
     // Continuous monitoring: check if controller percent increased (battery swap detection)
     float controller_percent_diff = current_controller_percent - last_controller_percent;
     if (controller_percent_diff > CHARGING_DETECT_THRESHOLD) {
@@ -178,7 +210,8 @@ float battery_calc_get_smart_percentage(float controller_battery_level,
         battery_calc_reset(current_controller_percent, battery_capacity);
         return current_controller_percent;
     }
-    
+    */
+   
     // Update last controller percent for next comparison
     last_controller_percent = current_controller_percent;
     
@@ -209,9 +242,7 @@ float battery_calc_get_smart_percentage(float controller_battery_level,
     // Periodically save state to NVS (every 30 seconds to reduce wear)
     uint32_t now = millis();
     if (now - last_save_time >= 30000) {
-        battery_calc_save_state(battery_percent);
-        last_saved_percent = battery_percent;
-        last_saved_capacity = battery_capacity;
+        battery_calc_save_state();
         last_save_time = now;
     }
     
