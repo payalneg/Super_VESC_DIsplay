@@ -62,6 +62,10 @@ static lv_obj_t *settings_wheel_diameter_spinbox = NULL;
 static lv_obj_t *settings_wheel_diameter_label = NULL;
 static lv_obj_t *settings_wheel_diameter_plus_btn = NULL;
 static lv_obj_t *settings_wheel_diameter_minus_btn = NULL;
+static lv_obj_t *settings_motor_poles_spinbox = NULL;
+static lv_obj_t *settings_motor_poles_label = NULL;
+static lv_obj_t *settings_motor_poles_plus_btn = NULL;
+static lv_obj_t *settings_motor_poles_minus_btn = NULL;
 static lv_obj_t *settings_reset_button = NULL;
 static lv_obj_t *settings_info_label = NULL;
 
@@ -810,6 +814,35 @@ static void wheel_diameter_minus_btn_event_cb(lv_event_t *e) {
     }
 }
 
+// Event handlers for Motor Poles spinbox
+static void motor_poles_spinbox_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_VALUE_CHANGED) {
+        int32_t value = lv_spinbox_get_value(settings_motor_poles_spinbox);
+        settings_wrapper_set_motor_poles((uint8_t)value);
+    }
+}
+
+static void motor_poles_plus_btn_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED) {
+        int32_t current_value = lv_spinbox_get_value(settings_motor_poles_spinbox);
+        if (current_value < 20) {
+            lv_spinbox_increment(settings_motor_poles_spinbox);
+        }
+    }
+}
+
+static void motor_poles_minus_btn_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED) {
+        int32_t current_value = lv_spinbox_get_value(settings_motor_poles_spinbox);
+        if (current_value > 2) {
+            lv_spinbox_decrement(settings_motor_poles_spinbox);
+        }
+    }
+}
+
 // Event handler for Reset button
 static void reset_button_event_cb(lv_event_t *e) {
     lv_event_code_t code = lv_event_get_code(e);
@@ -823,6 +856,7 @@ static void reset_button_event_cb(lv_event_t *e) {
         settings_wrapper_set_battery_calc_mode(0); // Direct
         settings_wrapper_set_show_fps(true);
         settings_wrapper_set_wheel_diameter_mm(200); // 200mm
+        settings_wrapper_set_motor_poles(7); // Standard for VESC
         
         // Update UI elements
         if (settings_target_id_spinbox) {
@@ -849,12 +883,15 @@ static void reset_button_event_cb(lv_event_t *e) {
         if (settings_wheel_diameter_spinbox) {
             lv_spinbox_set_value(settings_wheel_diameter_spinbox, 200); // 200mm
         }
-        
+        if (settings_motor_poles_spinbox) {
+            lv_spinbox_set_value(settings_motor_poles_spinbox, 7); // Standard for VESC
+        }
+
         // Apply FPS visibility
         if (guider_ui.dashboard_fps_text) {
             lv_obj_clear_flag(guider_ui.dashboard_fps_text, LV_OBJ_FLAG_HIDDEN);
         }
-        
+
         // Update info
         lv_label_set_text(settings_info_label, "Settings reset to defaults!");
     }
@@ -1379,9 +1416,67 @@ void settings_ui_init(lv_ui *ui) {
     lv_obj_set_style_radius(settings_wheel_diameter_plus_btn, 8, 0);
     lv_obj_set_style_border_width(settings_wheel_diameter_plus_btn, 0, 0);
     lv_obj_add_event_cb(settings_wheel_diameter_plus_btn, wheel_diameter_plus_btn_event_cb, LV_EVENT_CLICKED, NULL);
-    
+
     y_pos += spacing;
-    
+
+    // ========== Motor Poles Spinbox ==========
+    uint8_t motor_poles = settings_wrapper_get_motor_poles();
+
+    settings_motor_poles_label = lv_label_create(ui->settings);
+    lv_label_set_text(settings_motor_poles_label, "Motor Poles:");
+    lv_obj_set_pos(settings_motor_poles_label, 20, y_pos);
+    lv_obj_set_style_text_color(settings_motor_poles_label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_motor_poles_label, &lv_font_montserrat_16, 0);
+
+    // Minus button
+    settings_motor_poles_minus_btn = lv_btn_create(ui->settings);
+    lv_obj_t *motor_poles_minus_label = lv_label_create(settings_motor_poles_minus_btn);
+    lv_label_set_text(motor_poles_minus_label, "-");
+    lv_obj_align(motor_poles_minus_label, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_pos(settings_motor_poles_minus_btn, 20, y_pos + 30);
+    lv_obj_set_size(settings_motor_poles_minus_btn, 100, 50);
+    lv_obj_set_style_bg_color(settings_motor_poles_minus_btn, lv_color_hex(0xff4444), 0);
+    lv_obj_set_style_text_color(settings_motor_poles_minus_btn, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_motor_poles_minus_btn, &lv_font_montserrat_24, 0);
+    lv_obj_set_style_radius(settings_motor_poles_minus_btn, 8, 0);
+    lv_obj_set_style_border_width(settings_motor_poles_minus_btn, 0, 0);
+    lv_obj_add_event_cb(settings_motor_poles_minus_btn, motor_poles_minus_btn_event_cb, LV_EVENT_CLICKED, NULL);
+
+    // Spinbox
+    settings_motor_poles_spinbox = lv_spinbox_create(ui->settings);
+    lv_spinbox_set_range(settings_motor_poles_spinbox, 2, 20);
+    lv_spinbox_set_digit_format(settings_motor_poles_spinbox, 2, 0); // 2 digits, 0 decimal places
+    lv_spinbox_set_value(settings_motor_poles_spinbox, motor_poles);
+    lv_spinbox_set_step(settings_motor_poles_spinbox, 1);
+    lv_obj_set_pos(settings_motor_poles_spinbox, 190, y_pos + 30);
+    lv_obj_set_size(settings_motor_poles_spinbox, 100, 50);
+
+    // Style the spinbox
+    lv_obj_set_style_bg_color(settings_motor_poles_spinbox, lv_color_hex(0x1f1f1f), LV_PART_MAIN);
+    lv_obj_set_style_text_color(settings_motor_poles_spinbox, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+    lv_obj_set_style_text_font(settings_motor_poles_spinbox, &lv_font_montserrat_24, LV_PART_MAIN);
+    lv_obj_set_style_border_width(settings_motor_poles_spinbox, 1, LV_PART_MAIN);
+    lv_obj_set_style_border_color(settings_motor_poles_spinbox, lv_color_hex(0x00a9ff), LV_PART_MAIN);
+    lv_obj_set_style_radius(settings_motor_poles_spinbox, 8, LV_PART_MAIN);
+
+    lv_obj_add_event_cb(settings_motor_poles_spinbox, motor_poles_spinbox_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+
+    // Plus button
+    settings_motor_poles_plus_btn = lv_btn_create(ui->settings);
+    lv_obj_t *motor_poles_plus_label = lv_label_create(settings_motor_poles_plus_btn);
+    lv_label_set_text(motor_poles_plus_label, "+");
+    lv_obj_align(motor_poles_plus_label, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_pos(settings_motor_poles_plus_btn, 360, y_pos + 30);
+    lv_obj_set_size(settings_motor_poles_plus_btn, 100, 50);
+    lv_obj_set_style_bg_color(settings_motor_poles_plus_btn, lv_color_hex(0x00a9ff), 0);
+    lv_obj_set_style_text_color(settings_motor_poles_plus_btn, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_motor_poles_plus_btn, &lv_font_montserrat_24, 0);
+    lv_obj_set_style_radius(settings_motor_poles_plus_btn, 8, 0);
+    lv_obj_set_style_border_width(settings_motor_poles_plus_btn, 0, 0);
+    lv_obj_add_event_cb(settings_motor_poles_plus_btn, motor_poles_plus_btn_event_cb, LV_EVENT_CLICKED, NULL);
+
+    y_pos += spacing;
+
     // ========== Reset Button ==========
     settings_reset_button = lv_btn_create(ui->settings);
     lv_obj_t *reset_label = lv_label_create(settings_reset_button);

@@ -233,7 +233,34 @@ bool vesc_rt_data_is_fresh(void) {
 }
 
 float vesc_rt_data_get_speed_kmh(void) {
-	return rt_data.speed * 3.6f; // m/s to km/h
+	// Calculate speed based on motor RPM, wheel diameter, and motor poles
+	// This gives more accurate speed calculation accounting for wheel size
+
+	// Get settings
+	uint16_t wheel_diameter_mm = settings_get_wheel_diameter_mm();
+	uint8_t motor_poles = settings_get_motor_poles();
+
+	// Avoid division by zero
+	if (motor_poles == 0 || wheel_diameter_mm == 0) {
+		return rt_data.speed * 3.6f; // Fallback to VESC speed
+	}
+
+	// Convert ERPM to RPM
+	float rpm = rt_data.rpm;
+
+	// Convert wheel diameter from mm to meters
+	float wheel_radius_m = (float)wheel_diameter_mm / 2000.0f; // mm to meters (diameter -> radius)
+
+	// Calculate angular velocity (rad/s)
+	float omega_rad_s = rpm * 2.0f * 3.14159f / 60.0f;
+
+	// Calculate linear velocity (m/s)
+	float velocity_ms = omega_rad_s * wheel_radius_m;
+
+	// Convert to km/h
+	float velocity_kmh = velocity_ms * 3.6f;
+
+	return velocity_kmh;
 }
 
 float vesc_rt_data_get_trip_km(void) {

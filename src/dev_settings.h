@@ -31,6 +31,7 @@ typedef struct {
     battery_calc_mode_t battery_calc_mode;  // Battery calculation mode
     bool show_fps;                    // Show/hide FPS counter on dashboard
     uint16_t wheel_diameter_mm;       // Wheel diameter in millimeters (e.g., 100-300)
+    uint8_t motor_poles;              // Motor pole count (typically 7 for VESC)
 } device_settings_t;
 
 // Settings API
@@ -48,6 +49,7 @@ float settings_get_battery_capacity(void);
 battery_calc_mode_t settings_get_battery_calc_mode(void);
 bool settings_get_show_fps(void);
 uint16_t settings_get_wheel_diameter_mm(void);
+uint8_t settings_get_motor_poles(void);
 
 // Setters (will save to NVS)
 void settings_set_target_vesc_id(uint8_t id);
@@ -58,6 +60,7 @@ void settings_set_battery_capacity(float capacity);
 void settings_set_battery_calc_mode(battery_calc_mode_t mode);
 void settings_set_show_fps(bool show);
 void settings_set_wheel_diameter_mm(uint16_t diameter_mm);
+void settings_set_motor_poles(uint8_t poles);
 
 // Apply settings to hardware
 void settings_apply_brightness(void);

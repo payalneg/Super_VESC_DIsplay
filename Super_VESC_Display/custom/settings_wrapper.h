@@ -38,6 +38,7 @@ float settings_wrapper_get_battery_capacity(void);
 uint8_t settings_wrapper_get_battery_calc_mode(void);
 bool settings_wrapper_get_show_fps(void);
 uint16_t settings_wrapper_get_wheel_diameter_mm(void);
+uint8_t settings_wrapper_get_motor_poles(void);
 
 void settings_wrapper_set_target_vesc_id(uint8_t id);
 void settings_wrapper_set_can_speed_index(uint8_t index);
@@ -47,9 +48,13 @@ void settings_wrapper_set_battery_capacity(float capacity);
 void settings_wrapper_set_battery_calc_mode(uint8_t mode);
 void settings_wrapper_set_show_fps(bool show);
 void settings_wrapper_set_wheel_diameter_mm(uint16_t diameter_mm);
+void settings_wrapper_set_motor_poles(uint8_t poles);
 
 // Utility function
 int settings_wrapper_can_speed_to_kbps(uint8_t index);
+
+// Speed calculation functions
+float settings_wrapper_calculate_speed_kmh(float erpm);
 
 #ifdef __cplusplus
 }

@@ -23,6 +23,7 @@
 #define KEY_BATTERY_CALC_MODE "bat_calc_mode"
 #define KEY_SHOW_FPS          "show_fps"
 #define KEY_WHEEL_DIAMETER    "wheel_diam"
+#define KEY_MOTOR_POLES       "motor_poles"
 
 // Default settings
 #define DEFAULT_TARGET_VESC_ID      10
@@ -33,6 +34,7 @@
 #define DEFAULT_BATTERY_CALC_MODE   BATTERY_CALC_DIRECT
 #define DEFAULT_SHOW_FPS            false
 #define DEFAULT_WHEEL_DIAMETER_MM   200  // 200mm = typical skateboard/scooter wheel
+#define DEFAULT_MOTOR_POLES         7    // Standard for most VESC motors
 
 // Global settings storage
 static device_settings_t g_settings;
@@ -59,6 +61,7 @@ void settings_init(void) {
     g_settings.battery_calc_mode = DEFAULT_BATTERY_CALC_MODE;
     g_settings.show_fps = DEFAULT_SHOW_FPS;
     g_settings.wheel_diameter_mm = DEFAULT_WHEEL_DIAMETER_MM;
+    g_settings.motor_poles = DEFAULT_MOTOR_POLES;
     
     // Load from NVS
     settings_load();
@@ -85,6 +88,7 @@ void settings_load(void) {
     g_settings.battery_calc_mode = (battery_calc_mode_t)preferences.getUChar(KEY_BATTERY_CALC_MODE, DEFAULT_BATTERY_CALC_MODE);
     g_settings.show_fps = preferences.getBool(KEY_SHOW_FPS, DEFAULT_SHOW_FPS);
     g_settings.wheel_diameter_mm = preferences.getUShort(KEY_WHEEL_DIAMETER, DEFAULT_WHEEL_DIAMETER_MM);
+    g_settings.motor_poles = preferences.getUChar(KEY_MOTOR_POLES, DEFAULT_MOTOR_POLES);
     
     preferences.end();
     
@@ -130,7 +134,13 @@ void settings_load(void) {
         LOG_WARN(SYSTEM, "Invalid wheel diameter %d mm, using default %d", g_settings.wheel_diameter_mm, DEFAULT_WHEEL_DIAMETER_MM);
         g_settings.wheel_diameter_mm = DEFAULT_WHEEL_DIAMETER_MM;
     }
-    
+
+    // Validate motor poles
+    if (g_settings.motor_poles < 2 || g_settings.motor_poles > 20) {
+        LOG_WARN(SYSTEM, "Invalid motor poles %d, using default %d", g_settings.motor_poles, DEFAULT_MOTOR_POLES);
+        g_settings.motor_poles = DEFAULT_MOTOR_POLES;
+    }
+
     LOG_INFO(SYSTEM, "Settings loaded from NVS");
 }
 
@@ -149,6 +159,7 @@ void settings_save(void) {
     preferences.putUChar(KEY_BATTERY_CALC_MODE, (uint8_t)g_settings.battery_calc_mode);
     preferences.putBool(KEY_SHOW_FPS, g_settings.show_fps);
     preferences.putUShort(KEY_WHEEL_DIAMETER, g_settings.wheel_diameter_mm);
+    preferences.putUChar(KEY_MOTOR_POLES, g_settings.motor_poles);
     
     preferences.end();
     
@@ -167,7 +178,8 @@ void settings_reset_to_defaults(void) {
     g_settings.battery_calc_mode = DEFAULT_BATTERY_CALC_MODE;
     g_settings.show_fps = DEFAULT_SHOW_FPS;
     g_settings.wheel_diameter_mm = DEFAULT_WHEEL_DIAMETER_MM;
-    
+    g_settings.motor_poles = DEFAULT_MOTOR_POLES;
+
     settings_save();
     LOG_INFO(SYSTEM, "Settings reset to defaults");
 }
@@ -203,6 +215,10 @@ bool settings_get_show_fps(void) {
 
 uint16_t settings_get_wheel_diameter_mm(void) {
     return g_settings.wheel_diameter_mm;
+}
+
+uint8_t settings_get_motor_poles(void) {
+    return g_settings.motor_poles;
 }
 
 // Setters
@@ -298,10 +314,21 @@ void settings_set_wheel_diameter_mm(uint16_t diameter_mm) {
         LOG_WARN(SYSTEM, "Invalid wheel diameter %d mm (must be 50-2000)", diameter_mm);
         return;
     }
-    
+
     g_settings.wheel_diameter_mm = diameter_mm;
     settings_save();
     LOG_INFO(SYSTEM, "Wheel diameter set to %d mm", diameter_mm);
+}
+
+void settings_set_motor_poles(uint8_t poles) {
+    if (poles < 2 || poles > 20) {
+        LOG_WARN(SYSTEM, "Invalid motor poles %d (must be 2-20)", poles);
+        return;
+    }
+
+    g_settings.motor_poles = poles;
+    settings_save();
+    LOG_INFO(SYSTEM, "Motor poles set to %d", poles);
 }
 
 // Apply brightness to hardware
