@@ -36,6 +36,8 @@ uint8_t settings_wrapper_get_brightness(void);
 uint8_t settings_wrapper_get_controller_id(void);
 float settings_wrapper_get_battery_capacity(void);
 uint8_t settings_wrapper_get_battery_calc_mode(void);
+bool settings_wrapper_get_show_fps(void);
+uint16_t settings_wrapper_get_wheel_diameter_mm(void);
 
 void settings_wrapper_set_target_vesc_id(uint8_t id);
 void settings_wrapper_set_can_speed_index(uint8_t index);
@@ -43,6 +45,8 @@ void settings_wrapper_set_brightness(uint8_t brightness);
 void settings_wrapper_set_controller_id(uint8_t id);
 void settings_wrapper_set_battery_capacity(float capacity);
 void settings_wrapper_set_battery_calc_mode(uint8_t mode);
+void settings_wrapper_set_show_fps(bool show);
+void settings_wrapper_set_wheel_diameter_mm(uint16_t diameter_mm);
 
 // Utility function
 int settings_wrapper_can_speed_to_kbps(uint8_t index);

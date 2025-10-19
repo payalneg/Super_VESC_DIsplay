@@ -21,6 +21,8 @@
 #define KEY_CONTROLLER_ID     "controller_id"
 #define KEY_BATTERY_CAPACITY  "bat_capacity"
 #define KEY_BATTERY_CALC_MODE "bat_calc_mode"
+#define KEY_SHOW_FPS          "show_fps"
+#define KEY_WHEEL_DIAMETER    "wheel_diam"
 
 // Default settings
 #define DEFAULT_TARGET_VESC_ID      10
@@ -29,6 +31,8 @@
 #define DEFAULT_CONTROLLER_ID       255 //DO NOT CHANGE PLEASE
 #define DEFAULT_BATTERY_CAPACITY    15.0f
 #define DEFAULT_BATTERY_CALC_MODE   BATTERY_CALC_DIRECT
+#define DEFAULT_SHOW_FPS            false
+#define DEFAULT_WHEEL_DIAMETER_MM   200  // 200mm = typical skateboard/scooter wheel
 
 // Global settings storage
 static device_settings_t g_settings;
@@ -53,6 +57,8 @@ void settings_init(void) {
     g_settings.controller_id = DEFAULT_CONTROLLER_ID;
     g_settings.battery_capacity = DEFAULT_BATTERY_CAPACITY;
     g_settings.battery_calc_mode = DEFAULT_BATTERY_CALC_MODE;
+    g_settings.show_fps = DEFAULT_SHOW_FPS;
+    g_settings.wheel_diameter_mm = DEFAULT_WHEEL_DIAMETER_MM;
     
     // Load from NVS
     settings_load();
@@ -77,6 +83,8 @@ void settings_load(void) {
     g_settings.controller_id = preferences.getUChar(KEY_CONTROLLER_ID, DEFAULT_CONTROLLER_ID);
     g_settings.battery_capacity = preferences.getFloat(KEY_BATTERY_CAPACITY, DEFAULT_BATTERY_CAPACITY);
     g_settings.battery_calc_mode = (battery_calc_mode_t)preferences.getUChar(KEY_BATTERY_CALC_MODE, DEFAULT_BATTERY_CALC_MODE);
+    g_settings.show_fps = preferences.getBool(KEY_SHOW_FPS, DEFAULT_SHOW_FPS);
+    g_settings.wheel_diameter_mm = preferences.getUShort(KEY_WHEEL_DIAMETER, DEFAULT_WHEEL_DIAMETER_MM);
     
     preferences.end();
     
@@ -117,6 +125,12 @@ void settings_load(void) {
         g_settings.can_speed = DEFAULT_CAN_SPEED;
     }
     
+    // Validate wheel diameter
+    if (g_settings.wheel_diameter_mm < 50 || g_settings.wheel_diameter_mm > 2000) {
+        LOG_WARN(SYSTEM, "Invalid wheel diameter %d mm, using default %d", g_settings.wheel_diameter_mm, DEFAULT_WHEEL_DIAMETER_MM);
+        g_settings.wheel_diameter_mm = DEFAULT_WHEEL_DIAMETER_MM;
+    }
+    
     LOG_INFO(SYSTEM, "Settings loaded from NVS");
 }
 
@@ -133,6 +147,8 @@ void settings_save(void) {
     preferences.putUChar(KEY_CONTROLLER_ID, g_settings.controller_id);
     preferences.putFloat(KEY_BATTERY_CAPACITY, g_settings.battery_capacity);
     preferences.putUChar(KEY_BATTERY_CALC_MODE, (uint8_t)g_settings.battery_calc_mode);
+    preferences.putBool(KEY_SHOW_FPS, g_settings.show_fps);
+    preferences.putUShort(KEY_WHEEL_DIAMETER, g_settings.wheel_diameter_mm);
     
     preferences.end();
     
@@ -149,6 +165,8 @@ void settings_reset_to_defaults(void) {
     g_settings.controller_id = DEFAULT_CONTROLLER_ID;
     g_settings.battery_capacity = DEFAULT_BATTERY_CAPACITY;
     g_settings.battery_calc_mode = DEFAULT_BATTERY_CALC_MODE;
+    g_settings.show_fps = DEFAULT_SHOW_FPS;
+    g_settings.wheel_diameter_mm = DEFAULT_WHEEL_DIAMETER_MM;
     
     settings_save();
     LOG_INFO(SYSTEM, "Settings reset to defaults");
@@ -177,6 +195,14 @@ float settings_get_battery_capacity(void) {
 
 battery_calc_mode_t settings_get_battery_calc_mode(void) {
     return g_settings.battery_calc_mode;
+}
+
+bool settings_get_show_fps(void) {
+    return g_settings.show_fps;
+}
+
+uint16_t settings_get_wheel_diameter_mm(void) {
+    return g_settings.wheel_diameter_mm;
 }
 
 // Setters
@@ -259,6 +285,23 @@ void settings_set_battery_calc_mode(battery_calc_mode_t mode) {
     settings_save();
     LOG_INFO(SYSTEM, "Battery calculation mode set to %s", 
              mode == BATTERY_CALC_SMART ? "Smart Calculation" : "Direct from Controller");
+}
+
+void settings_set_show_fps(bool show) {
+    g_settings.show_fps = show;
+    settings_save();
+    LOG_INFO(SYSTEM, "FPS display set to %s", show ? "shown" : "hidden");
+}
+
+void settings_set_wheel_diameter_mm(uint16_t diameter_mm) {
+    if (diameter_mm < 50 || diameter_mm > 2000) {
+        LOG_WARN(SYSTEM, "Invalid wheel diameter %d mm (must be 50-2000)", diameter_mm);
+        return;
+    }
+    
+    g_settings.wheel_diameter_mm = diameter_mm;
+    settings_save();
+    LOG_INFO(SYSTEM, "Wheel diameter set to %d mm", diameter_mm);
 }
 
 // Apply brightness to hardware

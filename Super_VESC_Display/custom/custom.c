@@ -17,6 +17,10 @@
 #include "custom.h"
 #include "settings_wrapper.h"
 
+#ifdef LV_REALDEVICE
+#include "vesc_limits.h"
+#endif
+
 /*********************
  *      DEFINES
  *********************/
@@ -52,6 +56,12 @@ static lv_obj_t *settings_battery_capacity_plus_btn = NULL;
 static lv_obj_t *settings_battery_capacity_minus_btn = NULL;
 static lv_obj_t *settings_battery_calc_mode_dropdown = NULL;
 static lv_obj_t *settings_battery_calc_mode_label = NULL;
+static lv_obj_t *settings_show_fps_switch = NULL;
+static lv_obj_t *settings_show_fps_label = NULL;
+static lv_obj_t *settings_wheel_diameter_spinbox = NULL;
+static lv_obj_t *settings_wheel_diameter_label = NULL;
+static lv_obj_t *settings_wheel_diameter_plus_btn = NULL;
+static lv_obj_t *settings_wheel_diameter_minus_btn = NULL;
 static lv_obj_t *settings_reset_button = NULL;
 static lv_obj_t *settings_info_label = NULL;
 
@@ -313,6 +323,20 @@ void update_fps(int fps)
 {
     static int old_value = -999;
     static int min_fps = 400;
+    
+    // Check if FPS should be shown
+    bool show_fps = settings_wrapper_get_show_fps();
+    
+    // Hide or show FPS text based on setting
+    if (guider_ui.dashboard_fps_text) {
+        if (show_fps) {
+            lv_obj_clear_flag(guider_ui.dashboard_fps_text, LV_OBJ_FLAG_HIDDEN);
+        } else {
+            lv_obj_add_flag(guider_ui.dashboard_fps_text, LV_OBJ_FLAG_HIDDEN);
+            return; // Don't update if hidden
+        }
+    }
+    
     if (fps == old_value) {
         return;
     }
@@ -551,17 +575,78 @@ static void battery_calc_mode_dropdown_event_cb(lv_event_t *e) {
     }
 }
 
+// Timer callback for checking limits response
+static void limits_response_timer_cb(lv_timer_t* timer) {
+#ifdef LV_REALDEVICE
+    static int timeout_count = 0;
+    
+    if (vesc_limits_is_valid()) {
+        // Data received, update UI
+        const vesc_motor_limits_t* limits = vesc_limits_get();
+        
+        // Update spinboxes with received values
+        lv_spinbox_set_value(settings_motor_current_spinbox, (int32_t)(limits->l_current_max * 10));
+        lv_spinbox_set_value(settings_battery_current_spinbox, (int32_t)(limits->l_in_current_max * 10));
+        lv_spinbox_set_value(settings_erpm_max_spinbox, (int32_t)(limits->l_erpm_max / 1000));
+        
+        // Update status
+        char buf[128];
+        sprintf(buf, "✅ Limits loaded: Mot %.1fA, Bat %.1fA, ERPM %dk", 
+                limits->l_current_max, limits->l_in_current_max, limits->l_erpm_max / 1000);
+        lv_label_set_text(settings_limits_status_label, buf);
+        
+        // Delete timer
+        lv_timer_del(timer);
+        timeout_count = 0;
+    } else {
+        // Check timeout (5 seconds)
+        timeout_count++;
+        if (timeout_count >= 50) { // 50 * 100ms = 5 seconds
+            lv_label_set_text(settings_limits_status_label, "❌ Timeout: No response from VESC");
+            lv_timer_del(timer);
+            timeout_count = 0;
+        }
+    }
+#else
+    // Simulator mode - show placeholder values
+    lv_spinbox_set_value(settings_motor_current_spinbox, 600);  // 60.0A
+    lv_spinbox_set_value(settings_battery_current_spinbox, 450); // 45.0A
+    lv_spinbox_set_value(settings_erpm_max_spinbox, 60);         // 60k ERPM
+    lv_label_set_text(settings_limits_status_label, "✅ Simulator: Placeholder values loaded");
+    lv_timer_del(timer);
+#endif
+}
+
 // Event handlers for VESC Limits buttons
 static void read_limits_btn_event_cb(lv_event_t *e) {
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_CLICKED) {
-        // TODO: Call vesc_limits_request() when module is integrated
+#ifdef LV_REALDEVICE
+        // Real device - communicate with VESC
+        uint8_t target_vesc_id = settings_wrapper_get_target_vesc_id();
+        
+        // Update status label
         lv_label_set_text(settings_limits_status_label, "Reading limits from VESC...");
-        // For now, just show placeholder values
-        lv_spinbox_set_value(settings_motor_current_spinbox, 600); // 60.0A
-        lv_spinbox_set_value(settings_battery_current_spinbox, 450); // 45.0A
-        lv_spinbox_set_value(settings_erpm_max_spinbox, 60); // 60k ERPM
-        lv_label_set_text(settings_limits_status_label, "Use VESC Tool via BLE for full configuration");
+        
+        // Request limits from VESC
+        if (vesc_limits_request(target_vesc_id)) {
+            // Request sent successfully, wait for response
+            lv_label_set_text(settings_limits_status_label, "Request sent, waiting for response...");
+            
+            // Start a timer to check for response
+            lv_timer_create(limits_response_timer_cb, 100, NULL);
+            
+        } else {
+            // Request failed
+            lv_label_set_text(settings_limits_status_label, "❌ Failed to send request to VESC");
+        }
+#else
+        // Simulator mode - load placeholder values immediately
+        lv_label_set_text(settings_limits_status_label, "Simulator: Loading placeholder values...");
+        
+        // Start a timer to simulate loading delay
+        lv_timer_create(limits_response_timer_cb, 100, NULL);
+#endif
     }
 }
 
@@ -569,16 +654,51 @@ static void apply_limits_btn_event_cb(lv_event_t *e) {
     lv_event_code_t code = lv_event_get_code(e);
     if (code == LV_EVENT_CLICKED) {
         // Get values from spinboxes
-        int32_t motor_current = lv_spinbox_get_value(settings_motor_current_spinbox);
-        int32_t battery_current = lv_spinbox_get_value(settings_battery_current_spinbox);
-        int32_t erpm_max = lv_spinbox_get_value(settings_erpm_max_spinbox);
+        int32_t motor_current_raw = lv_spinbox_get_value(settings_motor_current_spinbox);
+        int32_t battery_current_raw = lv_spinbox_get_value(settings_battery_current_spinbox);
+        int32_t erpm_max_raw = lv_spinbox_get_value(settings_erpm_max_spinbox);
         
-        // TODO: Call vesc_limits_set_current_max() and vesc_limits_set_speed_max() when integrated
+        // Convert to actual values
+        float motor_current = motor_current_raw / 10.0f;  // Convert from 0.1A units
+        float battery_current = battery_current_raw / 10.0f;  // Convert from 0.1A units
+        float erpm_max = erpm_max_raw * 1000.0f;  // Convert from kERPM to ERPM
         
-        char buf[64];
-        sprintf(buf, "Applied: Mot %.1fA, Bat %.1fA, ERPM %dk", 
-                motor_current/10.0f, battery_current/10.0f, erpm_max);
+#ifdef LV_REALDEVICE
+        // Real device - apply to VESC
+        uint8_t target_vesc_id = settings_wrapper_get_target_vesc_id();
+        
+        // Update status
+        lv_label_set_text(settings_limits_status_label, "Applying limits to VESC...");
+        
+        // Apply limits using the vesc_limits module
+        bool success = true;
+        
+        // Set current limits
+        if (!vesc_limits_set_current_max(target_vesc_id, motor_current, battery_current)) {
+            success = false;
+        }
+        
+        // Set speed limit
+        if (success && !vesc_limits_set_speed_max(target_vesc_id, erpm_max)) {
+            success = false;
+        }
+        
+        // Update status based on result
+        if (success) {
+            char buf[128];
+            sprintf(buf, "✅ Applied: Mot %.1fA, Bat %.1fA, ERPM %dk", 
+                    motor_current, battery_current, erpm_max_raw);
+            lv_label_set_text(settings_limits_status_label, buf);
+        } else {
+            lv_label_set_text(settings_limits_status_label, "❌ Failed to apply limits to VESC");
+        }
+#else
+        // Simulator mode - just show confirmation
+        char buf[128];
+        sprintf(buf, "✅ Simulator: Values set - Mot %.1fA, Bat %.1fA, ERPM %dk", 
+                motor_current, battery_current, erpm_max_raw);
         lv_label_set_text(settings_limits_status_label, buf);
+#endif
     }
 }
 
@@ -642,6 +762,54 @@ static void erpm_max_minus_btn_event_cb(lv_event_t *e) {
     }
 }
 
+// Event handler for Show FPS switch
+static void show_fps_switch_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_VALUE_CHANGED) {
+        lv_obj_t *obj = lv_event_get_target(e);
+        bool checked = lv_obj_has_state(obj, LV_STATE_CHECKED);
+        settings_wrapper_set_show_fps(checked);
+        
+        // Apply immediately - show/hide FPS text
+        if (guider_ui.dashboard_fps_text) {
+            if (checked) {
+                lv_obj_clear_flag(guider_ui.dashboard_fps_text, LV_OBJ_FLAG_HIDDEN);
+            } else {
+                lv_obj_add_flag(guider_ui.dashboard_fps_text, LV_OBJ_FLAG_HIDDEN);
+            }
+        }
+    }
+}
+
+// Event handlers for Wheel Diameter spinbox
+static void wheel_diameter_spinbox_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_VALUE_CHANGED) {
+        int32_t value = lv_spinbox_get_value(settings_wheel_diameter_spinbox);
+        settings_wrapper_set_wheel_diameter_mm((uint16_t)value);
+    }
+}
+
+static void wheel_diameter_plus_btn_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED) {
+        int32_t current_value = lv_spinbox_get_value(settings_wheel_diameter_spinbox);
+        if (current_value < 500) {
+            lv_spinbox_increment(settings_wheel_diameter_spinbox);
+        }
+    }
+}
+
+static void wheel_diameter_minus_btn_event_cb(lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    if (code == LV_EVENT_CLICKED) {
+        int32_t current_value = lv_spinbox_get_value(settings_wheel_diameter_spinbox);
+        if (current_value > 50) {
+            lv_spinbox_decrement(settings_wheel_diameter_spinbox);
+        }
+    }
+}
+
 // Event handler for Reset button
 static void reset_button_event_cb(lv_event_t *e) {
     lv_event_code_t code = lv_event_get_code(e);
@@ -653,6 +821,8 @@ static void reset_button_event_cb(lv_event_t *e) {
         settings_wrapper_set_controller_id(2);
         settings_wrapper_set_battery_capacity(15.0f);
         settings_wrapper_set_battery_calc_mode(0); // Direct
+        settings_wrapper_set_show_fps(true);
+        settings_wrapper_set_wheel_diameter_mm(200); // 200mm
         
         // Update UI elements
         if (settings_target_id_spinbox) {
@@ -673,6 +843,17 @@ static void reset_button_event_cb(lv_event_t *e) {
         if (settings_battery_calc_mode_dropdown) {
             lv_dropdown_set_selected(settings_battery_calc_mode_dropdown, 0);
         }
+        if (settings_show_fps_switch) {
+            lv_obj_add_state(settings_show_fps_switch, LV_STATE_CHECKED);
+        }
+        if (settings_wheel_diameter_spinbox) {
+            lv_spinbox_set_value(settings_wheel_diameter_spinbox, 200); // 200mm
+        }
+        
+        // Apply FPS visibility
+        if (guider_ui.dashboard_fps_text) {
+            lv_obj_clear_flag(guider_ui.dashboard_fps_text, LV_OBJ_FLAG_HIDDEN);
+        }
         
         // Update info
         lv_label_set_text(settings_info_label, "Settings reset to defaults!");
@@ -690,8 +871,13 @@ void settings_ui_init(lv_ui *ui) {
         return; // Already initialized
     }
     
-    // Initialize settings system
+    // Initialize modules
     settings_wrapper_init();
+    
+#ifdef LV_REALDEVICE
+    // Initialize vesc_limits only on real device
+    vesc_limits_init();
+#endif
     
     // Get current settings
     uint8_t target_id = settings_wrapper_get_target_vesc_id();
@@ -1111,6 +1297,91 @@ void settings_ui_init(lv_ui *ui) {
     
     y_pos += spacing;
     */
+    
+    // ========== Show FPS Switch ==========
+    bool show_fps = settings_wrapper_get_show_fps();
+    
+    settings_show_fps_label = lv_label_create(ui->settings);
+    lv_label_set_text(settings_show_fps_label, "Show FPS Counter");
+    lv_obj_set_pos(settings_show_fps_label, 20, y_pos);
+    lv_obj_set_style_text_color(settings_show_fps_label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_show_fps_label, &lv_font_montserrat_16, 0);
+    
+    settings_show_fps_switch = lv_switch_create(ui->settings);
+    lv_obj_set_pos(settings_show_fps_switch, 380, y_pos - 5);
+    lv_obj_set_size(settings_show_fps_switch, 60, 30);
+    
+    // Set switch state based on current setting
+    if (show_fps) {
+        lv_obj_add_state(settings_show_fps_switch, LV_STATE_CHECKED);
+    }
+    
+    // Style the switch
+    lv_obj_set_style_bg_color(settings_show_fps_switch, lv_color_hex(0x2a3440), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(settings_show_fps_switch, lv_color_hex(0x00a9ff), LV_PART_INDICATOR | LV_STATE_CHECKED);
+    
+    lv_obj_add_event_cb(settings_show_fps_switch, show_fps_switch_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    
+    y_pos += spacing;
+    
+    // ========== Wheel Diameter Spinbox ==========
+    uint16_t wheel_diameter = settings_wrapper_get_wheel_diameter_mm();
+    
+    settings_wheel_diameter_label = lv_label_create(ui->settings);
+    lv_label_set_text(settings_wheel_diameter_label, "Wheel Diameter (mm):");
+    lv_obj_set_pos(settings_wheel_diameter_label, 20, y_pos);
+    lv_obj_set_style_text_color(settings_wheel_diameter_label, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_wheel_diameter_label, &lv_font_montserrat_16, 0);
+    
+    // Minus button
+    settings_wheel_diameter_minus_btn = lv_btn_create(ui->settings);
+    lv_obj_t *wheel_diam_minus_label = lv_label_create(settings_wheel_diameter_minus_btn);
+    lv_label_set_text(wheel_diam_minus_label, "-");
+    lv_obj_align(wheel_diam_minus_label, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_pos(settings_wheel_diameter_minus_btn, 20, y_pos + 30);
+    lv_obj_set_size(settings_wheel_diameter_minus_btn, 100, 50);
+    lv_obj_set_style_bg_color(settings_wheel_diameter_minus_btn, lv_color_hex(0xff4444), 0);
+    lv_obj_set_style_text_color(settings_wheel_diameter_minus_btn, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_wheel_diameter_minus_btn, &lv_font_montserrat_24, 0);
+    lv_obj_set_style_radius(settings_wheel_diameter_minus_btn, 8, 0);
+    lv_obj_set_style_border_width(settings_wheel_diameter_minus_btn, 0, 0);
+    lv_obj_add_event_cb(settings_wheel_diameter_minus_btn, wheel_diameter_minus_btn_event_cb, LV_EVENT_CLICKED, NULL);
+    
+    // Spinbox
+    settings_wheel_diameter_spinbox = lv_spinbox_create(ui->settings);
+    lv_spinbox_set_range(settings_wheel_diameter_spinbox, 50, 500);
+    lv_spinbox_set_digit_format(settings_wheel_diameter_spinbox, 3, 0); // 3 digits, 0 decimal places
+    lv_spinbox_set_value(settings_wheel_diameter_spinbox, wheel_diameter);
+    lv_spinbox_set_step(settings_wheel_diameter_spinbox, 5); // 5mm increments
+    lv_obj_set_pos(settings_wheel_diameter_spinbox, 190, y_pos + 30);
+    lv_obj_set_size(settings_wheel_diameter_spinbox, 100, 50);
+    
+    // Style the spinbox
+    lv_obj_set_style_bg_color(settings_wheel_diameter_spinbox, lv_color_hex(0x1f1f1f), LV_PART_MAIN);
+    lv_obj_set_style_text_color(settings_wheel_diameter_spinbox, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+    lv_obj_set_style_text_font(settings_wheel_diameter_spinbox, &lv_font_montserrat_24, LV_PART_MAIN);
+    lv_obj_set_style_border_width(settings_wheel_diameter_spinbox, 1, LV_PART_MAIN);
+    lv_obj_set_style_border_color(settings_wheel_diameter_spinbox, lv_color_hex(0x00a9ff), LV_PART_MAIN);
+    lv_obj_set_style_radius(settings_wheel_diameter_spinbox, 8, LV_PART_MAIN);
+    
+    lv_obj_add_event_cb(settings_wheel_diameter_spinbox, wheel_diameter_spinbox_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    
+    // Plus button
+    settings_wheel_diameter_plus_btn = lv_btn_create(ui->settings);
+    lv_obj_t *wheel_diam_plus_label = lv_label_create(settings_wheel_diameter_plus_btn);
+    lv_label_set_text(wheel_diam_plus_label, "+");
+    lv_obj_align(wheel_diam_plus_label, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_pos(settings_wheel_diameter_plus_btn, 360, y_pos + 30);
+    lv_obj_set_size(settings_wheel_diameter_plus_btn, 100, 50);
+    lv_obj_set_style_bg_color(settings_wheel_diameter_plus_btn, lv_color_hex(0x00a9ff), 0);
+    lv_obj_set_style_text_color(settings_wheel_diameter_plus_btn, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_text_font(settings_wheel_diameter_plus_btn, &lv_font_montserrat_24, 0);
+    lv_obj_set_style_radius(settings_wheel_diameter_plus_btn, 8, 0);
+    lv_obj_set_style_border_width(settings_wheel_diameter_plus_btn, 0, 0);
+    lv_obj_add_event_cb(settings_wheel_diameter_plus_btn, wheel_diameter_plus_btn_event_cb, LV_EVENT_CLICKED, NULL);
+    
+    y_pos += spacing;
+    
     // ========== Reset Button ==========
     settings_reset_button = lv_btn_create(ui->settings);
     lv_obj_t *reset_label = lv_label_create(settings_reset_button);

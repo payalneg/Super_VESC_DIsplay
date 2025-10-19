@@ -25,13 +25,17 @@ static struct {
     uint8_t controller_id;
     float battery_capacity;
     uint8_t battery_calc_mode;
+    bool show_fps;
+    uint16_t wheel_diameter_mm;
 } sim_settings = {
     .target_vesc_id = 10,
     .can_speed_index = 3,  // 1000 kbps
     .brightness = 80,
     .controller_id = 255,
     .battery_capacity = 15.0f,
-    .battery_calc_mode = 0  // Direct
+    .battery_calc_mode = 0,  // Direct
+    .show_fps = true,
+    .wheel_diameter_mm = 200  // 200mm default
 };
 #endif
 
@@ -97,6 +101,22 @@ uint8_t settings_wrapper_get_battery_calc_mode(void) {
 #endif
 }
 
+bool settings_wrapper_get_show_fps(void) {
+#if SIMULATOR_MODE
+    return sim_settings.show_fps;
+#else
+    return settings_get_show_fps();
+#endif
+}
+
+uint16_t settings_wrapper_get_wheel_diameter_mm(void) {
+#if SIMULATOR_MODE
+    return sim_settings.wheel_diameter_mm;
+#else
+    return settings_get_wheel_diameter_mm();
+#endif
+}
+
 void settings_wrapper_set_target_vesc_id(uint8_t id) {
 #if SIMULATOR_MODE
     sim_settings.target_vesc_id = id;
@@ -151,6 +171,22 @@ void settings_wrapper_set_battery_calc_mode(uint8_t mode) {
     sim_settings.battery_calc_mode = mode;
 #else
     settings_set_battery_calc_mode((battery_calc_mode_t)mode);
+#endif
+}
+
+void settings_wrapper_set_show_fps(bool show) {
+#if SIMULATOR_MODE
+    sim_settings.show_fps = show;
+#else
+    settings_set_show_fps(show);
+#endif
+}
+
+void settings_wrapper_set_wheel_diameter_mm(uint16_t diameter_mm) {
+#if SIMULATOR_MODE
+    sim_settings.wheel_diameter_mm = diameter_mm;
+#else
+    settings_set_wheel_diameter_mm(diameter_mm);
 #endif
 }
 
