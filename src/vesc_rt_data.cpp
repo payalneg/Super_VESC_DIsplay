@@ -235,7 +235,7 @@ bool vesc_rt_data_is_fresh(void) {
 float vesc_rt_data_get_speed_kmh(void) {
 	// Calculate speed based on motor RPM, wheel diameter, and motor poles
 	// This gives more accurate speed calculation accounting for wheel size
-
+	return rt_data.speed * 3.6f;
 	// Get settings
 	uint16_t wheel_diameter_mm = settings_get_wheel_diameter_mm();
 	uint8_t motor_poles = settings_get_motor_poles();

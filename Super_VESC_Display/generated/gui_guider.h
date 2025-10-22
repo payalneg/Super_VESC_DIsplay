@@ -124,6 +124,7 @@ LV_FONT_DECLARE(lv_font_Montserrat_I_20)
 LV_FONT_DECLARE(lv_font_Montserrat_I_26)
 LV_FONT_DECLARE(lv_font_Montserrat_I_15)
 LV_FONT_DECLARE(lv_font_Antonio_Regular_22)
+LV_FONT_DECLARE(lv_font_montserratMedium_24)
 LV_FONT_DECLARE(lv_font_montserratMedium_16)
 
 

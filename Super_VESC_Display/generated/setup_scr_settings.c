@@ -36,7 +36,7 @@ void setup_scr_settings(lv_ui *ui)
     lv_obj_align(ui->settings_exit_button_label, LV_ALIGN_CENTER, 0, 0);
     lv_obj_set_style_pad_all(ui->settings_exit_button, 0, LV_STATE_DEFAULT);
     lv_obj_set_width(ui->settings_exit_button_label, LV_PCT(100));
-    lv_obj_set_pos(ui->settings_exit_button, 16, 15);
+    lv_obj_set_pos(ui->settings_exit_button, 16, 14);
     lv_obj_set_size(ui->settings_exit_button, 450, 40);
 
     //Write style for settings_exit_button, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
@@ -47,7 +47,7 @@ void setup_scr_settings(lv_ui *ui)
     lv_obj_set_style_radius(ui->settings_exit_button, 5, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_shadow_width(ui->settings_exit_button, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(ui->settings_exit_button, lv_color_hex(0xffffff), LV_PART_MAIN|LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui->settings_exit_button, &lv_font_montserratMedium_16, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui->settings_exit_button, &lv_font_montserratMedium_24, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui->settings_exit_button, 255, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_align(ui->settings_exit_button, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN|LV_STATE_DEFAULT);
 

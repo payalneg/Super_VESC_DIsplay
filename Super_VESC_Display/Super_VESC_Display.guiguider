@@ -4954,8 +4954,7 @@
 					"bg_img_recolor": "#000000",
 					"bg_img_recolor_opa": 0
 				}
-			],
-			"layerName": "dashboard"
+			]
 		},
 		{
 			"name": "settings",
@@ -4980,7 +4979,7 @@
 					"id": "yj569g77",
 					"type": "btn",
 					"left": 16,
-					"top": 15,
+					"top": 14,
 					"visible": true,
 					"isLock": false,
 					"flag": [],
@@ -5019,7 +5018,7 @@
 							"bg_img_opa": 255,
 							"bg_img_recolor": "#ffffff",
 							"bg_img_recolor_opa": 0,
-							"font": 16,
+							"font": 24,
 							"font_family": "montserratMedium",
 							"text_color": "#ffffff",
 							"text_opa": 255,
@@ -5221,8 +5220,7 @@
 					"bg_img_recolor": "#ffffff",
 					"bg_img_recolor_opa": 0
 				}
-			],
-			"layerName": "settings"
+			]
 		}
 	],
 	"Application": {
@@ -5242,7 +5240,7 @@
 			"keyboard_font_type": "SourceHanSerifSC_Regular",
 			"keyboard_font_size": 18
 		},
-		"default_scr": "dashboard",
+		"default_scr": "settings",
 		"theme": "LV_THEME_MATERIAL_FLAG_LIGHT",
 		"screen": [
 			{
@@ -10206,7 +10204,7 @@
 						"flag": [],
 						"pos": [
 							16,
-							15
+							14
 						],
 						"size": [
 							450,
@@ -10267,7 +10265,7 @@
 								"bg_img_opa": 255,
 								"bg_img_recolor": "#ffffff",
 								"bg_img_recolor_opa": 0,
-								"font": 16,
+								"font": 24,
 								"font_family": "montserratMedium",
 								"text_color": "#ffffff",
 								"text_opa": 255,

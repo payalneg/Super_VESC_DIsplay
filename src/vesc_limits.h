@@ -11,6 +11,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Motor configuration limits structure
 typedef struct {
 	float l_current_max;        // Motor Current Max (A)
@@ -52,6 +56,10 @@ void vesc_limits_process_mcconf_response(uint8_t* data, unsigned int len);
 // BLE Command handlers
 void vesc_limits_handle_ble_get_request(uint8_t* response_buffer, uint16_t* response_len);
 void vesc_limits_handle_ble_set_request(uint8_t* data, unsigned int len);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* VESC_LIMITS_H_ */
 
