@@ -36,11 +36,13 @@
 #include "I2C_Driver.h"
 #include "ble_config.h"              // BLE mode configuration
 #include "comm_can.h"                // VESC CAN implementation from vesc_express
+#include "ble_system.h"              // Centralized BLE system initialization
 #include "ble_vesc_driver.h"         // BLE VESC Bridge
 #include "bluetooth_client.h"        // Bluetooth client for measurement devices
 #include "ble_keyboard.h"            // BLE keyboard functionality
 #include "ota_update.h"              // OTA update functionality
 #include "media_control.h"           // Media control and song display
+#include "music_server.h"            // Music server BLE service
 #include "buffer.h"                  // Buffer utility functions
 #include "datatypes.h"               // VESC data types
 #include "vesc_handler.h"            // VESC command handler
@@ -152,43 +154,71 @@ void setup()
   LOG_RAW("╚════════════════════════════════════════════════╝\n");
   LOG_RAW("\n⏳ Waiting for BLE/CAN messages...\n\n");
   
-  // Initialize BLE Server
-  if (BLE_Init()) {
-    LOG_INFO(SYSTEM, "BLE initialized successfully");
+  // ============================================================================
+  // Centralized BLE System Initialization
+  // ============================================================================
+  // Initialize BLE Device and Server first
+  if (!ble_system_init("SuperVESCDisplay")) {
+    LOG_ERROR(SYSTEM, "BLE system initialization failed");
+  } else {
+    LOG_INFO(SYSTEM, "BLE system initialized successfully");
     
-    // Register BLE response callback in vesc_handler
-    vesc_handler_set_response_callback(BLE_SendFramedResponse);
-    LOG_INFO(SYSTEM, "BLE response callback registered in VESC handler");
-  } else {
-    LOG_ERROR(SYSTEM, "BLE initialization failed");
-  }
-  
-  // Initialize Bluetooth client for measurement devices
-  if (bluetooth_client_init()) {
-    LOG_INFO(SYSTEM, "Bluetooth client initialized successfully");
-  } else {
-    LOG_ERROR(SYSTEM, "Bluetooth client initialization failed");
-  }
-  
-  // Initialize BLE keyboard
-  if (ble_keyboard_init()) {
-    LOG_INFO(SYSTEM, "BLE keyboard initialized successfully");
-  } else {
-    LOG_ERROR(SYSTEM, "BLE keyboard initialization failed");
-  }
-  
-  // Initialize OTA update module
-  if (ota_update_init()) {
-    LOG_INFO(SYSTEM, "OTA update module initialized successfully");
-  } else {
-    LOG_ERROR(SYSTEM, "OTA update module initialization failed");
-  }
-  
-  // Initialize media control
-  if (media_control_init()) {
-    LOG_INFO(SYSTEM, "Media control initialized successfully");
-  } else {
-    LOG_ERROR(SYSTEM, "Media control initialization failed");
+    // Get the BLE server instance
+    NimBLEServer* pBLEServer = ble_system_get_server();
+    
+    if (pBLEServer == nullptr) {
+      LOG_ERROR(SYSTEM, "Failed to get BLE server instance");
+    } else {
+      // Initialize BLE VESC Driver (adds VESC service and characteristics)
+      if (vesc_ble_driver_init(pBLEServer)) {
+        LOG_INFO(SYSTEM, "BLE VESC driver initialized successfully");
+        
+        // Register BLE response callback in vesc_handler
+        vesc_handler_set_response_callback(ble_vesc_send_frame_resppnse);
+        LOG_INFO(SYSTEM, "BLE response callback registered in VESC handler");
+      } else {
+        LOG_ERROR(SYSTEM, "BLE VESC driver initialization failed");
+      }
+      
+      // Initialize Bluetooth client for measurement devices
+      //if (bluetooth_client_init()) {
+      //  LOG_INFO(SYSTEM, "Bluetooth client initialized successfully");
+      //} else {
+     //   LOG_ERROR(SYSTEM, "Bluetooth client initialization failed");
+      //}
+      
+      // Initialize BLE keyboard (adds keyboard service and characteristics)
+      //if (ble_keyboard_init(pBLEServer)) {
+      //  LOG_INFO(SYSTEM, "BLE keyboard initialized successfully");
+      //} else {
+      //  LOG_ERROR(SYSTEM, "BLE keyboard initialization failed");
+      //}
+      
+      // Initialize OTA update module
+      if (ota_update_init()) {
+        LOG_INFO(SYSTEM, "OTA update module initialized successfully");
+      } else {
+        LOG_ERROR(SYSTEM, "OTA update module initialization failed");
+      }
+      
+      // Initialize media control
+      //  if (media_control_init()) {
+      //  LOG_INFO(SYSTEM, "Media control initialized successfully");
+      //} else {
+      //  LOG_ERROR(SYSTEM, "Media control initialization failed");
+      //}
+      
+      // Initialize music server (adds music service and characteristics)
+      if (music_server_init(pBLEServer)) {
+        LOG_INFO(SYSTEM, "Music server initialized successfully");
+      } else {
+        LOG_ERROR(SYSTEM, "Music server initialization failed");
+      }
+      
+      // Start advertising after all services and characteristics are added
+      ble_system_start_advertising();
+      LOG_INFO(SYSTEM, "BLE advertising started - all services ready");
+    }
   }
   
   // Initialize LVGL with dashboard (creates UI elements)
@@ -214,11 +244,12 @@ void setup()
 
 void loop()
 {
-  BLE_Loop();              // Process BLE communication
-  bluetooth_client_loop(); // Process Bluetooth client
-  ble_keyboard_loop();     // Process BLE keyboard
+  vesc_ble_driver_loop();              // Process BLE communication
+  //bluetooth_client_loop(); // Process Bluetooth client
+  //ble_keyboard_loop();     // Process BLE keyboard
   ota_update_loop();       // Process OTA updates
   media_control_loop();    // Process media control
+  music_server_loop();     // Process music server
   if (millis() > 5000) {
     vesc_rt_data_loop();     // Process RT data requests
   }

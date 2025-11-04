@@ -17,11 +17,6 @@ extern "C" {
 
 void custom_init(lv_ui *ui);
 void settings_ui_init(lv_ui *ui);
-void home_label_digit_animation(lv_ui *ui);
-void speed_meter_timer_cb(lv_timer_t * t);
-void digital_cluster_chart_timer_cb(lv_timer_t * t);
-void play_music(lv_ui *ui);
-void music_album_next(bool next);
 
 void update_current(float current);
 void update_speed(float speed);
@@ -38,6 +33,9 @@ void update_fps(int fps);
 void update_uptime(uint32_t uptime);
 void update_ble_status(bool connected);
 void update_esc_connection_status(bool connected);
+void update_navigation_icon(const uint8_t *img_data, uint32_t data_size, uint16_t width, uint16_t height, lv_img_cf_t color_format);
+void update_navigation_text(const char *text);
+void update_music_text(const char *text);
 #ifdef __cplusplus
 }
 #endif

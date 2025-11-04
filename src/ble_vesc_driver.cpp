@@ -1,5 +1,6 @@
 #include "ble_vesc_driver.h"
 #include "ble_config.h"
+#include "ble_system.h"  // For centralized BLE system
 #include "comm_can.h"
 #include "packet_parser.h"
 #include "vesc_handler.h"
@@ -33,26 +34,21 @@ static packet_parser_t ble_packet_parser;
 #define BLE_QUEUE_SIZE 10
 static QueueHandle_t ble_command_queue = NULL;
 
-// BLE Server Callbacks Implementation
-void MyServerCallbacks::onConnect(NimBLEServer *pServer, ble_gap_conn_desc *desc)
+// Connection state callbacks (called from general BLE system callbacks)
+void vesc_ble_driver_on_connect(void)
 {
-  LOG_INFO(BLE, "🔵 Client connected: %s", NimBLEAddress(desc->peer_ota_addr).toString().c_str());
   deviceConnected = true;
-  NimBLEDevice::startAdvertising();
 }
 
-void MyServerCallbacks::onDisconnect(NimBLEServer *pServer)
+void vesc_ble_driver_on_disconnect(void)
 {
-  LOG_INFO(BLE, "🔵 Client disconnected");
   deviceConnected = false;
   bleNotificationsSubscribed = false; // Reset subscription flag on disconnect
-  
-  NimBLEDevice::startAdvertising();
 }
 
-void MyServerCallbacks::onMTUChange(uint16_t MTU, ble_gap_conn_desc *desc)
+void vesc_ble_driver_on_mtu_change(uint16_t MTU)
 {
-  LOG_INFO(BLE, "🔵 MTU changed - new size %d, peer %s", MTU, NimBLEAddress(desc->peer_ota_addr).toString().c_str());
+  // Update VESC-specific MTU settings
   LOG_INFO(BLE, "🔵 Packet size adjusted to %d bytes", MTU - 3);
   MTU_SIZE = MTU;
   PACKET_SIZE = MTU_SIZE - 3;
@@ -152,18 +148,21 @@ void MyCallbacks::onSubscribe(NimBLECharacteristic* pCharacteristic, ble_gap_con
   }
 }
 
-// Initialize BLE Server
-bool BLE_Init() {
+// Initialize BLE Server (now accepts server as parameter)
+bool vesc_ble_driver_init(NimBLEServer* pServer) {
+  if (pServer == nullptr) {
+    LOG_ERROR(BLE, "BLE server is null");
+    return false;
+  }
+  
   try {
-    // Create the BLE Device
-    NimBLEDevice::init("SuperVESCDisplay");
-    NimBLEDevice::setPower(ESP_PWR_LVL_P9);
-
-    // Create the BLE Server
-    pServer = NimBLEDevice::createServer();
-    pServer->setCallbacks(new MyServerCallbacks());
-    auto pSecurity = new NimBLESecurity();
-    pSecurity->setAuthenticationMode(ESP_LE_AUTH_BOND);
+    // Store server reference
+    ::pServer = pServer;
+    
+    // Register VESC driver callbacks with BLE system
+    ble_system_register_connect_callback(vesc_ble_driver_on_connect);
+    ble_system_register_disconnect_callback(vesc_ble_driver_on_disconnect);
+    ble_system_register_mtu_change_callback(vesc_ble_driver_on_mtu_change);
 
     // Create the BLE Service
     BLEService *pService = pServer->createService(VESC_SERVICE_UUID);
@@ -186,12 +185,11 @@ bool BLE_Init() {
     // Start the VESC service
     pService->start();
 
-    // Start advertising
+    // Add service UUID to advertising (but don't start advertising yet)
     NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
     pAdvertising->addServiceUUID(VESC_SERVICE_UUID);
-    pAdvertising->start();
     
-    LOG_INFO(BLE, "🔵 Server initialized - waiting for client connection...");
+    LOG_INFO(BLE, "🔵 VESC service initialized - characteristics added");
     
     // Initialize command queue
     if (!BLE_InitCommandQueue()) {
@@ -544,7 +542,7 @@ void BLE_ProcessReceivedData() {
 }
 
 // Main BLE processing loop
-void BLE_Loop() {
+void vesc_ble_driver_loop() {
   // Process command queue (FIFO)
   BLE_ProcessCommandQueue();
   
@@ -584,7 +582,7 @@ void BLE_Loop() {
   // Handle BLE connection state changes
   if (!deviceConnected && oldDeviceConnected) {
     delay(500);                  // give the bluetooth stack the chance to get things ready
-    pServer->startAdvertising(); // restart advertising
+    ble_system_restart_advertising(); // restart advertising using centralized function
     //Serial.println("[%lu] 🔵 BLE: Restarted advertising", millis());
     oldDeviceConnected = deviceConnected;
   }
@@ -653,7 +651,7 @@ void BLE_ProcessCommandQueue() {
 }
 
 // Send framed response via BLE (callback for vesc_handler - local commands)
-void BLE_SendFramedResponse(uint8_t* data, unsigned int len) {
+void ble_vesc_send_frame_resppnse(uint8_t* data, unsigned int len) {
   if (!deviceConnected || !pCharacteristicVescTx) {
     LOG_WARN(BLE, "Cannot send response - not connected");
     return;

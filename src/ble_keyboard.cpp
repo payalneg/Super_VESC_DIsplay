@@ -227,9 +227,13 @@ BleKeyboardModule::BleKeyboardModule(std::string deviceName, std::string deviceM
     memset(&_mediaKeyReport, 0, sizeof(_mediaKeyReport));
 }
 
-void BleKeyboardModule::begin(void) {
-    NimBLEDevice::init(deviceName);
-    NimBLEServer* pServer = NimBLEDevice::createServer();
+void BleKeyboardModule::begin(NimBLEServer* pServer) {
+    if (pServer == nullptr) {
+        LOG_ERROR(BLE_KEYBOARD, "BLE server is null");
+        return;
+    }
+    
+    // Set MTU if not already set
     NimBLEDevice::setMTU(517);
     pServer->setCallbacks(this);
 
@@ -255,10 +259,11 @@ void BleKeyboardModule::begin(void) {
     advertising->setScanResponse(false);
     advertising->setMinPreferred(0x06);
     advertising->setMinPreferred(0x12);
-    advertising->start();
+    // Don't start advertising here - it will be started after all services are added
+    // advertising->start();
     // hid->setBatteryLevel(batteryLevel);
     
-    LOG_INFO(BLE_KEYBOARD, "BLE Keyboard advertising started!");
+    LOG_INFO(BLE_KEYBOARD, "BLE Keyboard initialized - characteristics will be added");
 }
 
 void BleKeyboardModule::end(void) {
@@ -464,7 +469,12 @@ void BleKeyboardModule::delay_ms(uint64_t ms) {
 }
 
 // Public API Functions
-bool ble_keyboard_init(void) {
+bool ble_keyboard_init(NimBLEServer* pServer) {
+    if (pServer == nullptr) {
+        LOG_ERROR(BLE_KEYBOARD, "BLE server is null");
+        return false;
+    }
+    
     LOG_INFO(BLE_KEYBOARD, "Initializing BLE Keyboard...");
     
     bleKeyboard = new BleKeyboardModule("SuperVESCKeyboard", "Super VESC Display", 100);
@@ -473,7 +483,7 @@ bool ble_keyboard_init(void) {
         return false;
     }
     
-    bleKeyboard->begin();
+    bleKeyboard->begin(pServer);
     LOG_INFO(BLE_KEYBOARD, "BLE Keyboard initialized successfully");
     return true;
 }

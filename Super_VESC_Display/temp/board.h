@@ -77,7 +77,7 @@
 #define LV_INDEV_DEF_READ_PERIOD 30
 #if LV_TICK_CUSTOM
 /*Header for the system time function*/
-#define LV_TICK_CUSTOM_INCLUDE <emscripten.h>
+#define LV_TICK_CUSTOM_INCLUDE "nxp_gg_utils.h"
 /*Expression evaluating to current system time in ms*/
 #define LV_TICK_CUSTOM_SYS_TIME_EXPR ((uint32_t)emscripten_get_now())
 #endif    /* LV_TICK_CUSTOM */
@@ -193,7 +193,7 @@
 
 /*1: Print the log with 'printf';
  *0: User need to register a callback with `lv_log_register_print_cb()`*/
-#define LV_LOG_PRINTF 0
+#define LV_LOG_PRINTF 1
 #define LV_LOG_TRACE_MEM 1
 #define LV_LOG_TRACE_TIMER 1
 #define LV_LOG_TRACE_INDEV 1

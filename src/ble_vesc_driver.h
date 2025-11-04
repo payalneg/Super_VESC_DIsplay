@@ -7,6 +7,7 @@
 #include "datatypes.h"
 #include "packet_parser.h"
 #include "ble_config.h"
+#include "ble_system.h"  // For BLESystemCallbacks base class
 
 // Compatibility structure for BLE
 typedef struct {
@@ -57,14 +58,6 @@ extern bool bleNotificationsSubscribed;
 #define VESC_CHARACTERISTIC_UUID_RX "6E400002-B5A3-F393-E0A9-E50E24DCCA9E"
 #define VESC_CHARACTERISTIC_UUID_TX "6E400003-B5A3-F393-E0A9-E50E24DCCA9E"
 
-// BLE Server Callbacks
-class MyServerCallbacks : public BLEServerCallbacks
-{
-public:
-  void onConnect(NimBLEServer *pServer, ble_gap_conn_desc *desc);
-  void onDisconnect(NimBLEServer *pServer);
-  void onMTUChange(uint16_t MTU, ble_gap_conn_desc *desc);
-};
 
 // BLE Characteristic Callbacks
 class MyCallbacks : public BLECharacteristicCallbacks
@@ -75,12 +68,17 @@ public:
 };
 
 // Function declarations
-bool BLE_Init();
-void BLE_Loop();
+bool vesc_ble_driver_init(NimBLEServer* pServer);  // Now accepts server as parameter
+void vesc_ble_driver_loop();
 bool BLE_IsConnected();
 bool BLE_IsSubscribed();
 void BLE_SendVescData(const vesc_sdk_data_t& data);
 void BLE_ProcessReceivedData();
+
+// Connection state callbacks (called from general BLE system callbacks)
+void vesc_ble_driver_on_connect(void);
+void vesc_ble_driver_on_disconnect(void);
+void vesc_ble_driver_on_mtu_change(uint16_t MTU);
 
 // CAN Bridge Functions
 void BLE_SendRawCANMessage(uint32_t can_id, uint8_t* data, uint8_t len);
@@ -94,7 +92,7 @@ bool BLE_QueueCommand(uint8_t* data, uint16_t length, uint8_t target_vesc_id, ui
 void BLE_ProcessCommandQueue();
 
 // Response sending (for vesc_handler callback)
-void BLE_SendFramedResponse(uint8_t* data, unsigned int len);
+void ble_vesc_send_frame_resppnse(uint8_t* data, unsigned int len);
 
 // CAN response handler (used in BLE-CAN bridge mode)
 void BLE_OnCANResponse(uint8_t* data, unsigned int len);

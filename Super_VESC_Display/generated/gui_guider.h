@@ -77,7 +77,12 @@ typedef struct
 	lv_obj_t *dashboard_slider_2;
 	lv_obj_t *dashboard_slider_3;
 	lv_obj_t *dashboard_fps_text;
+	lv_obj_t *dashboard_settings_button;
+	lv_obj_t *dashboard_navigation_icon;
+	lv_obj_t *dashboard_navigation_text;
+	lv_obj_t *dashboard_music_text;
 	lv_obj_t *dashboard_img_4;
+	lv_obj_t *dashboard_symbols;
 	lv_obj_t *settings;
 	bool settings_del;
 	lv_obj_t *settings_exit_button;
@@ -116,7 +121,6 @@ LV_IMG_DECLARE(_ble_con_alpha_43x30);
 LV_IMG_DECLARE(_settings2_alpha_30x30);
 
 LV_FONT_DECLARE(lv_font_montserratMedium_13)
-LV_FONT_DECLARE(lv_font_montserratMedium_12)
 LV_FONT_DECLARE(lv_font_Montserrat_I_61)
 LV_FONT_DECLARE(lv_font_Montserrat_I_16)
 LV_FONT_DECLARE(lv_font_Montserrat_I_18)
@@ -124,8 +128,9 @@ LV_FONT_DECLARE(lv_font_Montserrat_I_20)
 LV_FONT_DECLARE(lv_font_Montserrat_I_26)
 LV_FONT_DECLARE(lv_font_Montserrat_I_15)
 LV_FONT_DECLARE(lv_font_Antonio_Regular_22)
+LV_FONT_DECLARE(lv_font_montserratMedium_12)
+LV_FONT_DECLARE(lv_font_montserratMedium_20)
 LV_FONT_DECLARE(lv_font_montserratMedium_24)
-LV_FONT_DECLARE(lv_font_montserratMedium_16)
 
 
 #ifdef __cplusplus

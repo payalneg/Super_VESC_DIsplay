@@ -1,0 +1,167 @@
+#include "Bluetooth.h"
+#include "rendering.h"
+
+
+#define SERVICE_UUID "7addcd2b-b602-4581-8ce7-32a97ee5c07a"
+#define CHARACTERISTICS_OUT_UUID "9f42688e-43a3-4ebc-bcda-f3a1a2032b98"
+
+bool isConnected = false;
+bool isScanning = false;
+MeasurementData measurementData;
+NimBLEClient* client = nullptr;
+NimBLEScan* scan = nullptr;
+NimBLEAdvertisedDevice* targetDevice = nullptr;
+NimBLERemoteCharacteristic* pCharacteristic = nullptr;
+
+enum DeviceState { SCANNING, CONNECTING, CONNECTED, IDLE };
+DeviceState currentState = SCANNING;
+
+class MyClientCallback : public NimBLEClientCallbacks {
+    void onConnect(NimBLEClient* pClient) override {
+        isConnected = true;
+        Serial.println("Connected to device!");        
+        set_bluetooth_connected(isConnected);
+    }
+
+    void onDisconnect(NimBLEClient* pClient) override {
+        isConnected = false;
+        Serial.println("Disconnected from device!");
+        targetDevice = nullptr;
+        set_bluetooth_connected(isConnected);
+        currentState = SCANNING;
+    }
+};
+
+class MyAdvertisedDeviceCallbacks : public NimBLEAdvertisedDeviceCallbacks {
+    void onResult(NimBLEAdvertisedDevice* advertisedDevice) override {
+        Serial.print("Found device: ");
+        Serial.print(advertisedDevice->getName().c_str());
+        Serial.print(" ");
+        Serial.println(advertisedDevice->getAddress().toString().c_str());
+        if (advertisedDevice->getName() == "MeasurementDevice") {
+            Serial.println("Target device found!");
+            targetDevice = advertisedDevice;
+            scan->stop();
+            isScanning = false;
+            currentState = CONNECTING;
+        }
+    }
+};
+
+void onNotifyCallback(NimBLERemoteCharacteristic* pCharacteristic, uint8_t* data, size_t length, bool isNotify) {
+    if (length == sizeof(MeasurementData)) {
+        memcpy(&measurementData, data, sizeof(MeasurementData));
+        //printMeasurementData(measurementData);
+    }
+}
+
+void setupBluetooth() {
+    //NimBLEDevice::init("ESP32_Client");
+    scan = NimBLEDevice::getScan();
+    scan->setActiveScan(true);
+    scan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+}
+
+void scanForDevices() {
+    if (!isScanning) {
+        Serial.println("Starting scan...");
+        isScanning = true;
+        scan->start(0, nullptr, true);
+    }
+}
+
+void connectToServer() {
+    if (targetDevice == nullptr) return;
+
+    client = NimBLEDevice::createClient();
+    client->setClientCallbacks(new MyClientCallback());
+
+    Serial.println("Connecting to BLE server...");
+    if (!client->connect(targetDevice)) {
+        Serial.println("Failed to connect to server!");
+        targetDevice = nullptr;
+        currentState = SCANNING;
+        return;
+    }
+
+    NimBLERemoteService* pService = client->getService(SERVICE_UUID);
+    if (pService == nullptr) {
+        Serial.println("Failed to find service!");
+        client->disconnect();
+        currentState = SCANNING;
+        return;
+    }
+
+    pCharacteristic = pService->getCharacteristic(CHARACTERISTICS_OUT_UUID);
+    if (pCharacteristic == nullptr) {
+        Serial.println("Failed to find characteristic!");
+        client->disconnect();
+        currentState = SCANNING;
+        return;
+    }
+
+    if (pCharacteristic->canNotify()) {
+        pCharacteristic->subscribe(true, onNotifyCallback);
+    }
+    currentState = CONNECTED;
+}
+
+void printMeasurementData(const MeasurementData& data) {
+    Serial.println("Measurement Data:");
+    Serial.printf("  Total Distance: %u\n", data.totalDistance);
+    Serial.printf("  Remaining Distance: %u\n", data.remainingDistance);
+    Serial.printf("  Current Distance: %u\n", data.currentDistance);
+    Serial.printf("  Current: %d\n", data.current);
+    Serial.printf("  High Voltage: %d\n", data.highVoltage);
+    Serial.printf("  Power: %d\n", data.power);
+    Serial.printf("  Voltage 5V: %d\n", data.voltage5V);
+    Serial.printf("  Amp Hours: %d\n", data.ampHours);
+    Serial.printf("  Speed: %d\n", data.speed);
+    Serial.printf("  Battery Percentage: %u\n", data.batteryProc);
+    Serial.printf("  Temperature: %u\n", data.temperature);
+}
+
+void bluetoothProcessor() {
+    switch (currentState) {
+        case SCANNING:
+            scanForDevices();
+            break;
+
+        case CONNECTING:
+            connectToServer();
+            break;
+
+        case CONNECTED:
+            // Add logic for data handling if necessary
+            static int lastTime;
+            if ((millis() - lastTime) > 100)
+            {
+                lastTime = millis();
+                update_current_segments(measurementData.current/10);
+                //update_current_label((float)measurementData.current/10);
+                update_battery_level(measurementData.batteryProc);
+                update_rem_distance(measurementData.remainingDistance);
+                update_speed_label((float)measurementData.speed/10);
+                update_current_distance((float)measurementData.currentDistance/10);
+                update_total_distance(measurementData.totalDistance);
+                update_temperature_lebel(measurementData.temperature);
+                update_capacity((float)measurementData.ampHours/10);
+                update_5v_voltage((float)measurementData.voltage5V/10);
+                update_hv_voltage((float)measurementData.highVoltage/10);
+                update_power_label(measurementData.power);
+            }
+            static int lastTime2;
+            if ((millis() - lastTime2) > 10000)
+            {
+                lastTime2 = millis();
+                printMeasurementData(measurementData);
+            }
+            
+            break;
+
+        case IDLE:
+            currentState = SCANNING;
+            // Reserved state
+            break;
+    }
+}

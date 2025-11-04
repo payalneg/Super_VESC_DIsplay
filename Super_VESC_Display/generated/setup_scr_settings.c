@@ -36,7 +36,7 @@ void setup_scr_settings(lv_ui *ui)
     lv_obj_align(ui->settings_exit_button_label, LV_ALIGN_CENTER, 0, 0);
     lv_obj_set_style_pad_all(ui->settings_exit_button, 0, LV_STATE_DEFAULT);
     lv_obj_set_width(ui->settings_exit_button_label, LV_PCT(100));
-    lv_obj_set_pos(ui->settings_exit_button, 16, 14);
+    lv_obj_set_pos(ui->settings_exit_button, 17, 14);
     lv_obj_set_size(ui->settings_exit_button, 450, 40);
 
     //Write style for settings_exit_button, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.

@@ -37,7 +37,7 @@ typedef struct {
 class BleKeyboardModule : public NimBLEServerCallbacks, public NimBLECharacteristicCallbacks {
 public:
     BleKeyboardModule(std::string deviceName, std::string deviceManufacturer, uint8_t batteryLevel);
-    void begin(void);
+    void begin(NimBLEServer* pServer);  // Now accepts server as parameter
     void end(void);
     bool isConnected(void);
     void setBatteryLevel(uint8_t level);
@@ -87,7 +87,7 @@ private:
 };
 
 // Function declarations
-bool ble_keyboard_init(void);
+bool ble_keyboard_init(NimBLEServer* pServer);  // Now accepts server as parameter
 void ble_keyboard_loop(void);
 bool ble_keyboard_is_connected(void);
 void ble_keyboard_send_text(const char* text);

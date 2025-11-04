@@ -25,7 +25,7 @@
 #define KEY_LAST_CAPACITY      "last_capacity"
 
 // Threshold for detecting charging (percent difference)
-#define CHARGING_DETECT_THRESHOLD 10.0f  // If percent increased by >10%, assume charging happened
+#define CHARGING_DETECT_THRESHOLD 5.0f  // If percent increased by >10%, assume charging happened
 
 // Battery calculation state
 static bool initialized = false;

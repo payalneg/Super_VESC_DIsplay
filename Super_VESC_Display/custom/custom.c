@@ -13,6 +13,7 @@
  *********************/
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "lvgl.h"
 #include "custom.h"
 #include "settings_wrapper.h"
@@ -427,6 +428,106 @@ void update_esc_connection_status(bool connected)
                 lv_obj_clear_flag(guider_ui.dashboard_Ah_text, LV_OBJ_FLAG_HIDDEN);
             }
         }
+    }
+}
+
+void update_navigation_icon(const uint8_t *img_data, uint32_t data_size, uint16_t width, uint16_t height, lv_img_cf_t color_format)
+{
+    static lv_img_dsc_t *navigation_icon_dsc = NULL;
+    
+    // Free previous image data if exists
+    if (navigation_icon_dsc != NULL) {
+        if (navigation_icon_dsc->data != NULL) {
+            free((void *)navigation_icon_dsc->data);
+        }
+        free(navigation_icon_dsc);
+        navigation_icon_dsc = NULL;
+    }
+    
+    // Check if valid data provided
+    if (img_data == NULL || data_size == 0 || width == 0 || height == 0) {
+        // Clear icon if no data provided
+        if (guider_ui.dashboard_navigation_icon != NULL) {
+            lv_img_set_src(guider_ui.dashboard_navigation_icon, NULL);
+        }
+        return;
+    }
+    
+    // Allocate memory for image descriptor
+    navigation_icon_dsc = (lv_img_dsc_t *)malloc(sizeof(lv_img_dsc_t));
+    if (navigation_icon_dsc == NULL) {
+        return; // Memory allocation failed
+    }
+    
+    // Allocate memory for image data
+    uint8_t *data_copy = (uint8_t *)malloc(data_size);
+    if (data_copy == NULL) {
+        free(navigation_icon_dsc);
+        navigation_icon_dsc = NULL;
+        return; // Memory allocation failed
+    }
+    
+    // Copy image data
+    memcpy(data_copy, img_data, data_size);
+    
+    // Fill image descriptor
+    navigation_icon_dsc->header.cf = color_format;
+    navigation_icon_dsc->header.always_zero = 0;
+    navigation_icon_dsc->header.reserved = 0;
+    navigation_icon_dsc->header.w = width;
+    navigation_icon_dsc->header.h = height;
+    navigation_icon_dsc->data_size = data_size;
+    navigation_icon_dsc->data = data_copy;
+    
+    // Update icon
+    if (guider_ui.dashboard_navigation_icon != NULL) {
+        lv_img_set_src(guider_ui.dashboard_navigation_icon, navigation_icon_dsc);
+    }
+}
+
+void update_navigation_text(const char *text)
+{
+    static char old_text[65] = {0}; // Max length is 64 according to setup
+    
+    if (text == NULL) {
+        text = "";
+    }
+    
+    // Check if text changed
+    if (strcmp(text, old_text) == 0) {
+        return;
+    }
+    
+    // Copy new text
+    strncpy(old_text, text, sizeof(old_text) - 1);
+    old_text[sizeof(old_text) - 1] = '\0';
+    
+    // Update UI
+    if (guider_ui.dashboard_navigation_text != NULL) {
+        lv_textarea_set_text(guider_ui.dashboard_navigation_text, text);
+    }
+}
+
+void update_music_text(const char *text)
+{
+    static char old_text[65] = {0}; // Max length is 64 according to setup
+    
+    if (text == NULL) {
+        text = "";
+    }
+    
+    // Check if text changed
+    if (strcmp(text, old_text) == 0) {
+        return;
+    }
+    
+    // Copy new text
+    strncpy(old_text, text, sizeof(old_text) - 1);
+    old_text[sizeof(old_text) - 1] = '\0';
+    
+    // Update UI
+    if (guider_ui.dashboard_music_text != NULL) {
+        lv_textarea_set_text(guider_ui.dashboard_music_text, text);
     }
 }
 
@@ -1082,7 +1183,7 @@ void settings_ui_init(lv_ui *ui) {
     lv_obj_add_event_cb(settings_battery_calc_mode_dropdown, battery_calc_mode_dropdown_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
     
     y_pos += spacing + 10;
-    
+    /*
     // ========== VESC LIMITS SECTION ==========
     // Title
     settings_limits_title_label = lv_label_create(ui->settings);
@@ -1289,7 +1390,7 @@ void settings_ui_init(lv_ui *ui) {
     lv_obj_set_style_text_font(settings_limits_status_label, &lv_font_montserrat_24, 0);
     
     y_pos += spacing;
-    
+    */
     /*
     // ========== Brightness Slider ==========
     settings_brightness_label = lv_label_create(ui->settings);
@@ -1360,7 +1461,7 @@ void settings_ui_init(lv_ui *ui) {
     lv_obj_add_event_cb(settings_show_fps_switch, show_fps_switch_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
     
     y_pos += spacing;
-    
+    /*
     // ========== Wheel Diameter Spinbox ==========
     uint16_t wheel_diameter = settings_wrapper_get_wheel_diameter_mm();
     
@@ -1476,7 +1577,7 @@ void settings_ui_init(lv_ui *ui) {
     lv_obj_add_event_cb(settings_motor_poles_plus_btn, motor_poles_plus_btn_event_cb, LV_EVENT_CLICKED, NULL);
 
     y_pos += spacing;
-
+*/
     // ========== Reset Button ==========
     settings_reset_button = lv_btn_create(ui->settings);
     lv_obj_t *reset_label = lv_label_create(settings_reset_button);
@@ -1500,3 +1601,4 @@ void settings_ui_init(lv_ui *ui) {
     lv_obj_set_style_text_color(settings_info_label, lv_color_hex(0x00ff00), 0);
     lv_obj_set_style_text_font(settings_info_label, &lv_font_montserrat_24, 0);
 }
+

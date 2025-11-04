@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "lv_demo_music.h": "c",
-        "settings.h": "c"
+        "settings.h": "c",
+        "vesc_limits.h": "c"
     }
 }

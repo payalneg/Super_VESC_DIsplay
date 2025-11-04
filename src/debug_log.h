@@ -43,6 +43,7 @@
 #define LOG_BLE_KEYBOARD_ENABLED 1
 #define LOG_MEDIA_ENABLED   1
 #define LOG_OTA_ENABLED     1
+#define LOG_MUSIC_ENABLED   1
 
 // ============================================================================
 // LOGGING MACROS - DO NOT MODIFY BELOW THIS LINE
