@@ -17,6 +17,7 @@
 #include "debug_log.h"
 #include <Arduino.h>
 #include <Preferences.h>
+#include "vesc_trip_persist.h"
 
 // NVS namespace for battery calculation
 #define BATTERY_CALC_NAMESPACE "battery_calc"
@@ -266,3 +267,11 @@ void battery_calc_capacity_changed(void) {
     LOG_INFO(SYSTEM, "Battery capacity change flagged - will reset on next calculation");
 }
 
+void battery_calc_reset_trip_and_ah(void) {
+    LOG_INFO(SYSTEM, "Resetting trip and amp-hours due to battery swap");
+    
+    // Reset trip persistence (trip distance and amp-hours)
+    trip_persist_reset();
+    
+    LOG_INFO(SYSTEM, "Trip and amp-hours reset complete");
+}

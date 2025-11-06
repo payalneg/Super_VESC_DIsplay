@@ -13,6 +13,7 @@
 #include <string.h>
 #include "dev_settings.h"
 #include "ble_vesc_driver.h"
+#include "vesc_trip_persist.h"
 
 // Range calculation mode:
 // 0 = VESC Tool original (uses full battery_wh capacity - shows range for full battery)
@@ -58,6 +59,10 @@ void vesc_rt_data_init(void) {
 	memset(&rt_data, 0, sizeof(rt_data));
 	data_received = false;
 	rt_data_active = false;
+	
+	// Initialize trip persistence module
+	trip_persist_init();
+	
 	LOG_INFO(VESC, "RT Data module initialized");
 }
 
@@ -202,6 +207,8 @@ void vesc_rt_data_process_response(unsigned char *data, unsigned int len) {
 	// Update timestamp
 	vesc_rt_data_set_rx_time();
 	
+	// Update trip persistence with new values
+	trip_persist_update(rt_data.tachometer_abs, rt_data.amp_hours);
 	
 	// Log parsed data
 	static uint32_t log_counter = 0;
@@ -211,7 +218,7 @@ void vesc_rt_data_process_response(unsigned char *data, unsigned int len) {
 	if (log_counter >= 20) {
 		log_counter = 0;
 		float speed_kmh = rt_data.speed * 3.6f;
-		float trip_km = rt_data.tachometer_abs / 1000.0f;
+		float trip_km = trip_persist_get_trip_km(); // Use persistent trip
 		float odometer_km = rt_data.odometer / 1000.0f;
 		float range_km = vesc_rt_data_get_range_km();
 		float power_w = rt_data.current_in * rt_data.v_in;
@@ -264,7 +271,8 @@ float vesc_rt_data_get_speed_kmh(void) {
 }
 
 float vesc_rt_data_get_trip_km(void) {
-	return rt_data.tachometer_abs / 1000.0f; // meters to km
+	// Return persistent trip value (includes saved offset from previous sessions)
+	return trip_persist_get_trip_km();
 }
 
 float vesc_rt_data_get_odometer_km(void) {
@@ -274,7 +282,7 @@ float vesc_rt_data_get_odometer_km(void) {
 float vesc_rt_data_get_range_km(void) {
 	// Calculate range based on current consumption
 	float wh_consumed = rt_data.watt_hours - rt_data.watt_hours_charged;
-	float distance_km = rt_data.tachometer_abs / 1000.0f;
+	float distance_km = trip_persist_get_trip_km(); // Use persistent trip
 	
 	if (distance_km < 0.01f) {
 		return 0.0f; // Not enough data
@@ -300,13 +308,18 @@ float vesc_rt_data_get_range_km(void) {
 
 float vesc_rt_data_get_efficiency_whkm(void) {
 	float wh_consumed = rt_data.watt_hours - rt_data.watt_hours_charged;
-	float distance_km = rt_data.tachometer_abs / 1000.0f;
+	float distance_km = trip_persist_get_trip_km(); // Use persistent trip
 	
 	if (distance_km < 0.01f) {
 		return 0.0f; // Not enough data
 	}
 	
 	return wh_consumed / distance_km;
+}
+
+float vesc_rt_data_get_amp_hours(void) {
+	// Return persistent amp-hours value (includes saved offset from previous sessions)
+	return trip_persist_get_amp_hours();
 }
 
 // Call this periodically from main loop

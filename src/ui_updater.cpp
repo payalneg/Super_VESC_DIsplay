@@ -135,8 +135,9 @@ void ui_updater_update(void) {
 	// Temperature Motor (°C)
 	update_temp_motor(rt->temp_motor);
 	
-	// Amp hours consumed (Ah)
-	update_amp_hours(rt->amp_hours);
+	// Amp hours consumed (Ah) - use persistent value
+	float amp_hours = vesc_rt_data_get_amp_hours();
+	update_amp_hours(amp_hours);
 	
 	// Battery temperature (if available) - for now use MOSFET temp
 	update_battery_temp(rt->temp_mos);
