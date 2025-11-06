@@ -275,3 +275,7 @@ void battery_calc_reset_trip_and_ah(void) {
     
     LOG_INFO(SYSTEM, "Trip and amp-hours reset complete");
 }
+
+float battery_calc_get_remaining_ah(void) {
+    return remaining_battery_ah;
+}

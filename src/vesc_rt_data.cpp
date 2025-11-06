@@ -14,15 +14,23 @@
 #include "dev_settings.h"
 #include "ble_vesc_driver.h"
 #include "vesc_trip_persist.h"
+#include "vesc_battery_calc.h"
 
-// Range calculation mode:
-// 0 = VESC Tool original (uses full battery_wh capacity - shows range for full battery)
-// 1 = Realistic mode (uses remaining energy: battery_wh * battery_level - shows actual range)
-#define USE_REALISTIC_RANGE_CALCULATION 1
+// Range calculation parameters
+// Update range calculation every 100m or 0.1Ah
+#define RANGE_UPDATE_DISTANCE_M  100.0f  // Update every 100 meters
+#define RANGE_UPDATE_AH          0.1f    // Update every 0.1 Ah
 
 // Latest RT data
 static vesc_setup_values_t rt_data;
 static bool data_received = false;
+
+// Range calculation state
+static float last_range_distance_km = 0.0f;  // Last distance when range was calculated
+static float last_range_ah = 0.0f;           // Last Ah when range was calculated
+static float cached_range_km = 0.0f;         // Cached range value
+static float cached_ah_per_km = 0.0f;        // Cached consumption Ah/km
+static bool range_initialized = false;       // Range calculation initialized flag
 
 // Timer for RT data requests
 static bool rt_data_active = false;
@@ -280,30 +288,57 @@ float vesc_rt_data_get_odometer_km(void) {
 }
 
 float vesc_rt_data_get_range_km(void) {
-	// Calculate range based on current consumption
-	float wh_consumed = rt_data.watt_hours - rt_data.watt_hours_charged;
-	float distance_km = trip_persist_get_trip_km(); // Use persistent trip
+	// Get current trip data
+	float distance_km = trip_persist_get_trip_km();
+	float consumed_ah = trip_persist_get_amp_hours();
 	
-	if (distance_km < 0.01f) {
-		return 0.0f; // Not enough data
+	// Get remaining battery capacity from battery calculator
+	float remaining_ah = battery_calc_get_remaining_ah();
+	
+	// Check if we need to recalculate
+	// Recalculate if: distance changed by 100m OR consumed Ah changed by 0.1Ah
+	float distance_delta_m = (distance_km - last_range_distance_km) * 1000.0f;
+	float ah_delta = consumed_ah - last_range_ah;
+	
+	bool should_recalculate = !range_initialized || 
+	                          (distance_delta_m >= RANGE_UPDATE_DISTANCE_M) || 
+	                          (ah_delta >= RANGE_UPDATE_AH);
+	
+	// If not enough data yet, return 0
+	if (distance_km < 0.1f) {
+		cached_range_km = 0.0f;
+		range_initialized = false;
+		return 0.0f;
 	}
 	
-	float wh_per_km = wh_consumed / distance_km;
-	
-	if (wh_per_km < 0.1f) {
-		return 999.9f; // Infinite range
+	// Recalculate if needed
+	if (should_recalculate) {
+		// Calculate consumption: Ah per km
+		float ah_per_km = consumed_ah / distance_km;
+		
+		// Store calculated consumption
+		cached_ah_per_km = ah_per_km;
+		
+		// If consumption is too low (regenerative braking or error), show max range
+		if (ah_per_km < 0.01f) {
+			cached_range_km = 999.9f;
+		} else {
+			// Calculate range: remaining capacity / consumption
+			cached_range_km = remaining_ah / ah_per_km;
+		}
+		
+		// Update last calculation point
+		last_range_distance_km = distance_km;
+		last_range_ah = consumed_ah;
+		range_initialized = true;
+		
+		// Log calculation
+		LOG_DEBUG(VESC, "Range recalc: Distance=%.2f km, Consumed=%.2f Ah, Remaining=%.2f Ah, "
+		          "Consumption=%.3f Ah/km, Range=%.1f km", 
+		          distance_km, consumed_ah, remaining_ah, ah_per_km, cached_range_km);
 	}
 	
-#if USE_REALISTIC_RANGE_CALCULATION
-	// Realistic mode: Calculate remaining energy based on current battery level
-	float remaining_wh = rt_data.battery_wh * rt_data.battery_level;
-	float range = remaining_wh / wh_per_km;
-#else
-	// VESC Tool original: Use full battery capacity (shows range for full battery)
-	float range = rt_data.battery_wh / wh_per_km;
-#endif
-	
-	return range;
+	return cached_range_km;
 }
 
 float vesc_rt_data_get_efficiency_whkm(void) {
@@ -315,6 +350,23 @@ float vesc_rt_data_get_efficiency_whkm(void) {
 	}
 	
 	return wh_consumed / distance_km;
+}
+
+float vesc_rt_data_get_efficiency_ahkm(void) {
+	// Return cached consumption value from range calculation
+	if (!range_initialized) {
+		// If range not calculated yet, calculate directly
+		float consumed_ah = trip_persist_get_amp_hours();
+		float distance_km = trip_persist_get_trip_km();
+		
+		if (distance_km < 0.01f) {
+			return 0.0f; // Not enough data
+		}
+		
+		return consumed_ah / distance_km;
+	}
+	
+	return cached_ah_per_km;
 }
 
 float vesc_rt_data_get_amp_hours(void) {

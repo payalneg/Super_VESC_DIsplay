@@ -34,8 +34,9 @@ bool vesc_rt_data_is_fresh(void);
 float vesc_rt_data_get_speed_kmh(void);      // Speed in km/h
 float vesc_rt_data_get_trip_km(void);        // Current trip in km (with persistence)
 float vesc_rt_data_get_odometer_km(void);    // Odometer in km
-float vesc_rt_data_get_range_km(void);       // Estimated range in km
+float vesc_rt_data_get_range_km(void);       // Estimated range in km (based on Ah/km)
 float vesc_rt_data_get_efficiency_whkm(void); // Wh/km consumption
+float vesc_rt_data_get_efficiency_ahkm(void); // Ah/km consumption
 float vesc_rt_data_get_amp_hours(void);      // Amp-hours consumed (with persistence)
 
 // Call this periodically from main loop (handles automatic requests)

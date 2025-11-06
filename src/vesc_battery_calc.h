@@ -48,5 +48,9 @@ void battery_calc_capacity_changed(void);
 // Call when user confirms battery swap
 void battery_calc_reset_trip_and_ah(void);
 
+// Get remaining battery capacity in Ah
+// Returns: Remaining capacity in Ah (used for range calculation)
+float battery_calc_get_remaining_ah(void);
+
 #endif /* VESC_BATTERY_CALC_H_ */
 
