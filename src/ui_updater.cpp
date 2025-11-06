@@ -79,6 +79,21 @@ void ui_updater_update(void) {
 	}
 	last_update_time = now;
 	
+	// ESC connection status (check if RT data is fresh)
+	bool esc_connected = vesc_rt_data_is_fresh();
+
+	if (!BLE_IsSubscribed()) {
+		if (millis() > 5000) {
+			update_esc_connection_status(esc_connected);
+		}
+	}
+
+	// BLE connection status
+	bool ble_connected = BLE_IsConnected();
+	update_ble_status(ble_connected);
+		
+	if (!esc_connected) return;
+
 	// Get latest RT data
 	const vesc_setup_values_t* rt = vesc_rt_data_get_latest();
 	
@@ -135,16 +150,6 @@ void ui_updater_update(void) {
 	// Uptime (ms)
 	update_uptime(rt->uptime_ms);
 	
-	// BLE connection status
-	bool ble_connected = BLE_IsConnected();
-	update_ble_status(ble_connected);
-	
-	// ESC connection status (check if RT data is fresh)
-	if (!BLE_IsSubscribed()) {
-		bool esc_connected = vesc_rt_data_is_fresh();
-
-		update_esc_connection_status(esc_connected);
-	}
 	// Debug log every 1 second (20 updates = 1 second at 50ms interval)
 	static uint32_t update_counter = 0;
 	update_counter++;
