@@ -216,7 +216,7 @@ void vesc_rt_data_process_response(unsigned char *data, unsigned int len) {
 	vesc_rt_data_set_rx_time();
 	
 	// Update trip persistence with new values
-	trip_persist_update(rt_data.tachometer_abs, rt_data.amp_hours);
+	trip_persist_update(rt_data.tachometer_abs, rt_data.amp_hours, rt_data.uptime_ms);
 	
 	// Log parsed data
 	static uint32_t log_counter = 0;
@@ -372,6 +372,11 @@ float vesc_rt_data_get_efficiency_ahkm(void) {
 float vesc_rt_data_get_amp_hours(void) {
 	// Return persistent amp-hours value (includes saved offset from previous sessions)
 	return trip_persist_get_amp_hours();
+}
+
+uint32_t vesc_rt_data_get_uptime_ms(void) {
+	// Return persistent uptime value (includes saved offset from previous sessions)
+	return trip_persist_get_uptime_ms();
 }
 
 // Call this periodically from main loop

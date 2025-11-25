@@ -185,6 +185,7 @@ float battery_calc_get_smart_percentage(float controller_battery_level,
                 LOG_INFO(SYSTEM, "Charging detected on startup! Saved: %.1f%%, Current: %.1f%% (diff: +%.1f%%) - resetting", 
                          last_saved_percent, current_controller_percent, percent_diff);
                 battery_calc_reset(current_controller_percent, battery_capacity);
+                battery_calc_reset_trip_and_ah();
                 return current_controller_percent;
             } else {
                 // Continue from saved state
@@ -268,12 +269,12 @@ void battery_calc_capacity_changed(void) {
 }
 
 void battery_calc_reset_trip_and_ah(void) {
-    LOG_INFO(SYSTEM, "Resetting trip and amp-hours due to battery swap");
+    LOG_INFO(SYSTEM, "Resetting trip, amp-hours and uptime due to battery swap");
     
-    // Reset trip persistence (trip distance and amp-hours)
+    // Reset trip persistence (trip distance, amp-hours and uptime)
     trip_persist_reset();
     
-    LOG_INFO(SYSTEM, "Trip and amp-hours reset complete");
+    LOG_INFO(SYSTEM, "Trip, amp-hours and uptime reset complete");
 }
 
 float battery_calc_get_remaining_ah(void) {

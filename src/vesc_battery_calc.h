@@ -43,8 +43,8 @@ bool battery_calc_is_initialized(void);
 // Notify that battery capacity has changed (triggers reset on next calculation)
 void battery_calc_capacity_changed(void);
 
-// Reset trip and amp-hours when battery is swapped
-// This function resets both battery calculation and trip/amp-hours persistence
+// Reset trip, amp-hours and uptime when battery is swapped
+// This function resets trip/amp-hours/uptime persistence
 // Call when user confirms battery swap
 void battery_calc_reset_trip_and_ah(void);
 

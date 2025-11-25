@@ -148,8 +148,9 @@ void ui_updater_update(void) {
 	// Odometer (km)
 	update_odometer(rt->odometer/1000.0f);
 	
-	// Uptime (ms)
-	update_uptime(rt->uptime_ms);
+	// Uptime (ms) - use persistent value
+	uint32_t uptime_ms = vesc_rt_data_get_uptime_ms();
+	update_uptime(uptime_ms);
 	
 	// Debug log every 1 second (20 updates = 1 second at 50ms interval)
 	static uint32_t update_counter = 0;

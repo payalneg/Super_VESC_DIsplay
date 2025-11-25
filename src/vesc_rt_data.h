@@ -38,6 +38,7 @@ float vesc_rt_data_get_range_km(void);       // Estimated range in km (based on 
 float vesc_rt_data_get_efficiency_whkm(void); // Wh/km consumption
 float vesc_rt_data_get_efficiency_ahkm(void); // Ah/km consumption
 float vesc_rt_data_get_amp_hours(void);      // Amp-hours consumed (with persistence)
+uint32_t vesc_rt_data_get_uptime_ms(void);   // Uptime in milliseconds (with persistence)
 
 // Call this periodically from main loop (handles automatic requests)
 void vesc_rt_data_loop(void);
