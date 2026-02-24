@@ -64,8 +64,8 @@ GT911_INT_PIN   = 4
 
 #### CAN (TWAI)
 ```
-CAN_TX_PIN      = 48
-CAN_RX_PIN      = 47
+CAN_TX_PIN      = 6
+CAN_RX_PIN      = 0
 ```
 
 ## 🚀 Quick Start

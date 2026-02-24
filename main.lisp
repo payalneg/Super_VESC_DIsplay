@@ -37,12 +37,12 @@
     } {
         (if (= profile-index 1) {
             ; Profile 1: Medium
-            (conf-set 'max-speed (/ 35.0 3.6))  ; 35 km/h in m/s
+            (conf-set 'max-speed (/ 40.0 3.6))  ; 35 km/h in m/s
             (print "Profile 1: Medium (35 km/h)")
         } {
             (if (= profile-index 2) {
                 ; Profile 2: Fast
-                (conf-set 'max-speed (/ 50.0 3.6))  ; 50 km/h in m/s
+                (conf-set 'max-speed (/ 60.0 3.6))  ; 50 km/h in m/s
                 (print "Profile 2: Fast (50 km/h)")
             })
         })
@@ -122,22 +122,29 @@
         ;(set-rpm 0)
         ; Re-enable app output if we disabled it
         (if (= app-output-disabled 1) {
+
             ; Detach ADC to take control
             (if (= adc-detached 0) {
                 (app-adc-detach 1 1)  ; Detach both ADC1 and ADC2
                 (setq adc-detached 1)
             })
             ; Set ADC values to zero before re-enabling app output
-            (app-adc-override 0 0.0)  ; ADC1 (throttle) = 0
-            (app-adc-override 1 0.0)  ; ADC2 (brake) = 0
+            ;(app-adc-override 0 0.0)  ; ADC1 (throttle) = 0
+            ;(app-adc-override 1 0.0)  ; ADC2 (brake) = 0
             ; Small delay to ensure values are set
+            ;(set-kill-sw 1)
+            ; Re-attach ADC to return control
+            (app-adc-detach 1 0)  ; Attach ADC back
+            (set-current 0) 
             (sleep 0.05)
+            ;(set-kill-sw 0)
             ; Re-enable app output
             (app-disable-output 0)  ; 0 means enable now
             (setq app-output-disabled 0)
             ; Re-attach ADC to return control
             (app-adc-detach 1 0)  ; Attach ADC back
             (setq adc-detached 0)
+
         })
         (print "Cruise control deactivated")
     })
@@ -169,7 +176,9 @@
                 (setq old-brake brake-value)
             })
             ; Maintain cruise control speed
-            (set-rpm cruise-rpm)
+            (if (= cruise-active 1) {
+                (set-rpm cruise-rpm)
+            })
         } {
             ; When cruise control is not active, still update old values to track state
             (let ((throttle-value (get-adc-decoded 0))) {
