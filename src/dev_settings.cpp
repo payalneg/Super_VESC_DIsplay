@@ -93,17 +93,20 @@ void settings_load(void) {
     preferences.end();
     
     // Validate settings
-    if (g_settings.target_vesc_id == 0 || g_settings.target_vesc_id > 254) {
-        LOG_WARN(SYSTEM, "Invalid target VESC ID %d, using default %d", g_settings.target_vesc_id, DEFAULT_TARGET_VESC_ID);
-        g_settings.target_vesc_id = DEFAULT_TARGET_VESC_ID;
-    }
+    if (g_settings.target_vesc_id == 0) {
+    LOG_WARN(SYSTEM,
+             "Invalid target VESC ID %u, using default %u",
+             (unsigned)g_settings.target_vesc_id,
+             (unsigned)DEFAULT_TARGET_VESC_ID);
+    g_settings.target_vesc_id = DEFAULT_TARGET_VESC_ID;
+}
     
     if (g_settings.screen_brightness > 100) {
         LOG_WARN(SYSTEM, "Invalid brightness %d, using default %d", g_settings.screen_brightness, DEFAULT_BRIGHTNESS);
         g_settings.screen_brightness = DEFAULT_BRIGHTNESS;
     }
     
-    if (g_settings.controller_id == 0 || g_settings.controller_id > 254) {
+    if (g_settings.controller_id == 0) {
         LOG_WARN(SYSTEM, "Invalid controller ID %d, using default %d", g_settings.controller_id, DEFAULT_CONTROLLER_ID);
         g_settings.controller_id = DEFAULT_CONTROLLER_ID;
     }
@@ -223,11 +226,11 @@ uint8_t settings_get_motor_poles(void) {
 
 // Setters
 void settings_set_target_vesc_id(uint8_t id) {
-    if (id == 0 || id > 254) {
+    if (id == 0) {
         LOG_WARN(SYSTEM, "Invalid target VESC ID %d", id);
         return;
     }
-    
+    // 1..255 разрешаем
     g_settings.target_vesc_id = id;
     settings_save();
     LOG_INFO(SYSTEM, "Target VESC ID set to %d", id);
@@ -263,7 +266,7 @@ void settings_set_screen_brightness(uint8_t brightness) {
 }
 
 void settings_set_controller_id(uint8_t id) {
-    if (id == 0 || id > 254) {
+    if (id == 0) {
         LOG_WARN(SYSTEM, "Invalid controller ID %d", id);
         return;
     }
