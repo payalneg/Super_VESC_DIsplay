@@ -195,18 +195,10 @@
 ; Function to increase cruise control speed by 1 km/h
 (defun increase-cruise-speed () {
     (if (= cruise-active 1) {
-        ; Get current speed in m/s
-        (let ((current-speed-ms (get-speed))) {
-            ; Calculate new speed: add 1 km/h = 0.2778 m/s
-            (let ((new-speed-ms (+ current-speed-ms (/ 1.0 3.6)))) {
-                ; Calculate RPM change based on current speed-to-RPM ratio
-                ; If current speed is 0, use a default ratio (approximate)
-                (if (> (abs current-speed-ms) 0.1) {
-                    ; Use cached rpm-per-ms if available, otherwise calculate it
-                    (if (= rpm-per-ms 0.0) {
-                        (setq rpm-per-ms (/ (abs cruise-rpm) (abs current-speed-ms)))
-                    })
-                    ; Calculate new RPM
+        (if (> rpm-per-ms 0.0) {
+            ; Calculate target speed from cruise-rpm (not actual speed)
+            (let ((current-speed-ms (/ (abs cruise-rpm) rpm-per-ms))) {
+                (let ((new-speed-ms (+ current-speed-ms (/ 1.0 3.6)))) {
                     (let ((new-rpm (* new-speed-ms rpm-per-ms))) {
                         ; Preserve direction (sign)
                         (if (< cruise-rpm 0) {
@@ -217,18 +209,18 @@
                         (set-rpm cruise-rpm)
                         (print (str-merge "Cruise speed increased to RPM: " (to-str cruise-rpm)))
                     })
-                } {
-                    ; If speed is near zero, use a small RPM increment
-                    (let ((rpm-increment 50)) {
-                        (if (< cruise-rpm 0) {
-                            (setq cruise-rpm (- cruise-rpm rpm-increment))
-                        } {
-                            (setq cruise-rpm (+ cruise-rpm rpm-increment))
-                        })
-                        (set-rpm cruise-rpm)
-                        (print (str-merge "Cruise speed increased to RPM: " (to-str cruise-rpm)))
-                    })
                 })
+            })
+        } {
+            ; Fallback: use small RPM increment if ratio not yet available
+            (let ((rpm-increment 50)) {
+                (if (< cruise-rpm 0) {
+                    (setq cruise-rpm (- cruise-rpm rpm-increment))
+                } {
+                    (setq cruise-rpm (+ cruise-rpm rpm-increment))
+                })
+                (set-rpm cruise-rpm)
+                (print (str-merge "Cruise speed increased to RPM: " (to-str cruise-rpm)))
             })
         })
     })
@@ -270,33 +262,32 @@
 ; Function to decrease cruise control speed by 1 km/h
 (defun decrease-cruise-speed () {
     (if (= cruise-active 1) {
-        ; Get current speed in m/s
-        (let ((current-speed-ms (get-speed))) {
-            ; Calculate new speed: subtract 1 km/h = 0.2778 m/s
-            (let ((new-speed-ms (- current-speed-ms (/ 1.0 3.6)))) {
-                ; Ensure speed doesn't go negative and current speed is valid for calculation
-                (if (and (> new-speed-ms 0.1) (> (abs current-speed-ms) 0.1)) {
-                    ; Use cached rpm-per-ms if available, otherwise calculate it
-                    (if (= rpm-per-ms 0.0) {
-                        (setq rpm-per-ms (/ (abs cruise-rpm) (abs current-speed-ms)))
-                    })
-                    ; Calculate new RPM
-                    (let ((new-rpm (* new-speed-ms rpm-per-ms))) {
-                        ; Preserve direction (sign)
-                        (if (< cruise-rpm 0) {
-                            (setq cruise-rpm (- new-rpm))
-                        } {
-                            (setq cruise-rpm new-rpm)
+        (if (> rpm-per-ms 0.0) {
+            ; Calculate target speed from cruise-rpm (not actual speed)
+            (let ((current-speed-ms (/ (abs cruise-rpm) rpm-per-ms))) {
+                (let ((new-speed-ms (- current-speed-ms (/ 1.0 3.6)))) {
+                    (if (> new-speed-ms 0.1) {
+                        (let ((new-rpm (* new-speed-ms rpm-per-ms))) {
+                            ; Preserve direction (sign)
+                            (if (< cruise-rpm 0) {
+                                (setq cruise-rpm (- new-rpm))
+                            } {
+                                (setq cruise-rpm new-rpm)
+                            })
+                            (set-rpm cruise-rpm)
+                            (print (str-merge "Cruise speed decreased to RPM: " (to-str cruise-rpm)))
                         })
-                        (set-rpm cruise-rpm)
-                        (print (str-merge "Cruise speed decreased to RPM: " (to-str cruise-rpm)))
+                    } {
+                        ; Target speed too low, deactivate cruise control
+                        (deactivate-cruise-control)
+                        (print "Cruise control deactivated: speed too low")
                     })
-                } {
-                    ; If speed would go too low, deactivate cruise control
-                    (deactivate-cruise-control)
-                    (print "Cruise control deactivated: speed too low")
                 })
             })
+        } {
+            ; No ratio available, can't safely decrease
+            (deactivate-cruise-control)
+            (print "Cruise control deactivated: no speed ratio available")
         })
     })
 })
